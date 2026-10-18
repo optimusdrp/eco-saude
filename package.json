@@ -1,0 +1,28 @@
+{
+  "name": "ecosaude",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm db:migrate && turbo run dev",
+    "dev:site": "turbo run dev --filter=@ecosaude/site",
+    "dev:backoffice": "pnpm db:migrate && turbo run dev --filter=@ecosaude/backoffice",
+    "dev:app": "pnpm db:migrate && turbo run dev --filter=@ecosaude/app",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:check": "pnpm --filter @ecosaude/db check",
+    "db:reset-local": "docker compose down -v && docker compose up -d postgres",
+    "db:generate": "pnpm --filter @ecosaude/db generate",
+    "db:migrate": "pnpm --filter @ecosaude/db migrate",
+    "db:seed": "pnpm --filter @ecosaude/db seed",
+    "db:studio": "pnpm --filter @ecosaude/db studio"
+  },
+  "devDependencies": {
+    "turbo": "2.11.7"
+  }
+}

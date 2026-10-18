@@ -1,0 +1,30 @@
+# Banco PostgreSQL para desenvolvimento local.
+# Subir:  pnpm db:up      Parar: pnpm db:down      Testar conexão: pnpm db:check
+#
+# PORTA 54320 (e não a padrão 5432) DE PROPÓSITO:
+# se o computador já tiver um PostgreSQL instalado (comum no Windows), ele
+# ocupa a 5432 e o projeto acabaria conectando no banco errado, com outra senha.
+#
+# Os dados ficam no volume "pgdata" e sobrevivem a reinícios.
+# Atenção: usuário e senha abaixo só valem na PRIMEIRA criação do volume.
+# Se mudar a senha depois, rode "pnpm db:reset-local" para recriar o banco local.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecosaude-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecosaude
+    ports:
+      - "54320:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecosaude"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:

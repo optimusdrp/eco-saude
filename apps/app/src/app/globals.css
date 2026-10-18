@@ -1,0 +1,79 @@
+/*
+ * Estilos do ambiente da clínica.
+ * Cores e fontes vêm de @ecosaude/tokens (as mesmas do site e do backoffice).
+ */
+@import "tailwindcss";
+@import "@ecosaude/tokens/theme.css";
+
+/* Cores dos canais (identificação rápida na lista de conversas) */
+@theme {
+  --color-ch-whatsapp: #1fa855;
+  --color-ch-telegram: #2a9fd8;
+  --color-ch-instagram: #d6297c;
+  --color-ch-facebook: #3b63e0;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-fog);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-crm);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Diálogos nativos (<dialog>): fundo escurecido */
+  dialog::backdrop {
+    background: rgb(24 32 58 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+}
+
+/*
+ * Anel de espera: borda circular que "enche" conforme o paciente espera
+ * resposta. --p vai de 0 a 1 (1 = meta de primeira resposta estourada).
+ */
+.wait-ring {
+  --p: 0;
+  --ring: var(--color-pep);
+  background: conic-gradient(var(--ring) calc(var(--p) * 360deg), rgb(24 32 58 / 0.1) 0);
+}
+
+/* Barra de rolagem discreta nas colunas */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(24 32 58 / 0.2) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

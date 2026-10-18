@@ -1,0 +1,33 @@
+{
+  "name": "@ecosaude/db",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Banco PostgreSQL: esquema (Drizzle ORM), migrações, conexão e dados iniciais",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "check": "tsx --env-file-if-exists=../../.env src/check.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "studio": "drizzle-kit studio",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo sem lint"
+  },
+  "dependencies": {
+    "@ecosaude/core": "workspace:*",
+    "bcryptjs": "3.0.3",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  }
+}

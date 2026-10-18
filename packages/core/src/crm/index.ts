@@ -1,0 +1,38 @@
+/**
+ * @ecosaude/core/crm: regras do módulo CRM que não dependem de banco nem de tela.
+ * Uso: import { JOURNEY_STAGES, noShowRisk, detectIntent } from "@ecosaude/core/crm";
+ */
+export * from "./constants";
+export * from "./messages";
+export * from "./scheduling";
+export * from "./time";
+export * from "./duplicates";
+export * from "./tasks";
+export * from "./permissions";
+export * from "./hours";
+export * from "./templates";
+export * from "./automations";
+export * from "./ai";
+export * from "./ai-intent";
+export * from "./ai-summary";
+export * from "./ai-schedule";
+export * from "./ai-sentiment";
+export * from "./ai-promise";
+export * from "./ml";
+export * from "./risk-model";
+export * from "./waitlist-score";
+export * from "./durations";
+export * from "./day-brief";
+export * from "./next-step";
+export * from "./loss-reason";
+export * from "./profile-extract";
+export * from "./duplicate-review";
+export * from "./behavior-tags";
+export * from "./return-message";
+export * from "./best-time";
+export * from "./rule-from-text";
+export * from "./quick-reply-mining";
+export * from "./service-audit";
+export * from "./privacy";
+export * from "./timezones";
+export * from "./attachments";

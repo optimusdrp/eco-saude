@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { logoutAction } from "@/lib/auth/actions";
+import { getCurrentUser, pendingStep, routeForStep } from "@/lib/auth/dal";
+import { VerifyCodeForm } from "../../forms";
+
+export const metadata: Metadata = { title: "Verificação" };
+
+export default async function VerifyPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const step = pendingStep(user);
+  if (step !== "two-factor") redirect(step ? routeForStep(step) : "/hoje");
+  return (
+    <>
+      <h1 className="text-2xl font-bold">Verificação em duas etapas</h1>
+      <p className="mt-1 mb-6 text-ink-soft">Digite o código de “EcoSaúde Clínica” no seu aplicativo autenticador.</p>
+      <VerifyCodeForm />
+      <form action={logoutAction} className="mt-4">
+        <button type="submit" className="min-h-11 text-sm font-semibold text-ink-soft underline-offset-4 hover:underline">
+          Entrar com outra conta
+        </button>
+      </form>
+    </>
+  );
+}

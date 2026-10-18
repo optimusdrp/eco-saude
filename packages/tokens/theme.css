@@ -1,0 +1,40 @@
+/*
+ * Tokens de design compartilhados (Tailwind v4).
+ * Importado por apps/site e apps/backoffice: mude aqui e os dois acompanham.
+ *
+ * PALETA "Flora brasileira": cada módulo tem a cor de uma planta nativa.
+ *   Jacarandá (CRM e marca) · Ipê-amarelo (ERP) · Hortelã (Prontuário) · Anil (BI)
+ */
+@theme {
+  /* Base */
+  --color-fog: #f2f3f7;
+  --color-paper: #ffffff;
+  --color-ink: #18203a;
+  --color-ink-soft: #4f5873;
+  --color-line: #dce0ea;
+  --color-night: #1f1842;
+  --color-night-soft: #2c2458;
+
+  /* Módulos */
+  --color-crm: #6d4ae0;
+  --color-crm-tint: #ece7fc;
+  --color-erp: #f0ae2e;
+  --color-erp-ink: #8a5a00;
+  --color-erp-tint: #fdf1d8;
+  --color-pep: #13a178;
+  --color-pep-ink: #0b7356;
+  --color-pep-tint: #dcf3ea;
+  --color-bi: #2f5bea;
+  --color-bi-tint: #e1e8fd;
+
+  /* Estados */
+  --color-alert: #d9364f;
+  --color-alert-tint: #fbe3e7;
+
+  /* Tipografia */
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Breakpoint extra para telas muito pequenas (320px) */
+  --breakpoint-xs: 25rem;
+}

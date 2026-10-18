@@ -1,0 +1,52 @@
+/*
+ * Estilos globais do backoffice.
+ * Cores e fontes vêm de @ecosaude/tokens (as mesmas do site).
+ * O backoffice é uma ferramenta de trabalho: tipografia menor e mais densa
+ * que a do site, mesma identidade.
+ */
+@import "tailwindcss";
+@import "@ecosaude/tokens/theme.css";
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-fog);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-crm);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Números alinhados em tabelas e valores */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "TOTP_ENCRYPTION_KEY",
+    "NEXT_PUBLIC_SITE_URL",
+    "CRON_SECRET",
+    "META_APP_SECRET",
+    "META_VERIFY_TOKEN",
+    "META_GRAPH_VERSION",
+    "WHATSAPP_ACCESS_TOKEN",
+    "WHATSAPP_PHONE_NUMBER_ID",
+    "MESSENGER_PAGE_TOKEN",
+    "MESSENGER_PAGE_ID",
+    "INSTAGRAM_ACCESS_TOKEN",
+    "INSTAGRAM_ACCOUNT_ID",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_BOT_USERNAME",
+    "TELEGRAM_WEBHOOK_SECRET"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {}
+  }
+}

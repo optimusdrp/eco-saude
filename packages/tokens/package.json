@@ -1,0 +1,7 @@
+{
+  "name": "@ecosaude/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tokens de design (cores e fontes) compartilhados entre site e backoffice",
+  "exports": { "./theme.css": "./theme.css" }
+}

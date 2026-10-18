@@ -1,0 +1,19 @@
+{
+  "name": "@ecosaude/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Criptografia e 2FA compartilhadas pelos apps (somente servidor)",
+  "type": "module",
+  "exports": {
+    "./crypto": "./src/crypto.ts",
+    "./totp": "./src/totp.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit", "lint": "echo sem lint" },
+  "dependencies": {
+    "@ecosaude/db": "workspace:*",
+    "otpauth": "9.5.2",
+    "qrcode": "1.5.4",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": { "@types/node": "26.6.4", "@types/qrcode": "1.5.6", "typescript": "6.0.3" }
+}

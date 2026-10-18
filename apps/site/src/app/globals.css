@@ -1,0 +1,66 @@
+/*
+ * Estilos globais do site.
+ * As cores e fontes (tokens) vêm do pacote compartilhado @ecosaude/tokens,
+ * o mesmo usado pelo backoffice.
+ */
+@import "tailwindcss";
+@import "@ecosaude/tokens/theme.css";
+
+/* Comportamento base */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* compensa o cabeçalho fixo ao navegar por âncoras */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-fog);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Foco visível para navegação por teclado (acessibilidade) */
+  :focus-visible {
+    outline: 3px solid var(--color-crm);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: var(--color-crm-tint);
+    color: var(--color-ink);
+  }
+}
+
+/* Respeita quem configurou o sistema para reduzir animações */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

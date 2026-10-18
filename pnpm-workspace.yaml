@@ -1,0 +1,9 @@
+# Pastas que fazem parte do monorepo
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Pacotes com scripts de instalação permitidos (ex.: compilar binários)
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver
