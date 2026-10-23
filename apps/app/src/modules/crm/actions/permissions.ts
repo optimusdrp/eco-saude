@@ -1,9 +1,9 @@
 "use server";
 
-import { isClinicPermission, normalizePermissions, ROLE_PRESETS, type ClinicPermission } from "@ecosaude/core/crm";
+import { baselinePermissions, HEALTH_COUNCILS, isClinicPermission, normalizePermissions, ROLE_PRESETS, type ClinicPermission } from "@ecosaude/core/crm";
 import { clinicRoleSchema } from "@ecosaude/core/crm/validation";
 import { flattenErrors } from "@ecosaude/core/validation";
-import { count, eq, schema } from "@ecosaude/db";
+import { and, count, eq, isNotNull, schema } from "@ecosaude/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { authorizeCrm } from "@/lib/auth/dal";
@@ -117,10 +117,30 @@ export async function setUserAccessAction(_prev: ActionState, form: FormData): P
   if (!ctx) return NOT_ALLOWED;
   const ids = z.object({ id: z.uuid(), roleId: z.uuid() }).safeParse({ id: field(form, "id"), roleId: field(form, "roleId") });
   if (!ids.success) return { ok: false, message: "Escolha o perfil." };
+  // Perfil de profissional de saúde (registro no conselho). Vazio = não é profissional de saúde.
+  const health = z
+    .object({
+      council: z.union([z.literal(""), z.string().refine((c) => c in HEALTH_COUNCILS, "Conselho inválido")]),
+      number: z.string().trim().max(20).regex(/^[0-9A-Za-z.-]*$/, "Só números, letras, ponto e hífen"),
+      uf: z.union([z.literal(""), z.string().regex(/^[A-Z]{2}$/, "UF com 2 letras")]),
+    })
+    .refine((h) => !h.council || h.number, { path: ["number"], message: "Informe o número do registro" })
+    .safeParse({ council: field(form, "healthCouncil"), number: field(form, "healthCouncilNumber"), uf: field(form, "healthCouncilUf").toUpperCase() });
+  if (!health.success) return { ok: false, errors: flattenErrors(health.error), message: health.error.issues[0]?.message };
+  const h = health.data.council ? health.data : null;
+  // Unidades em que a pessoa trabalha (só existe a escolha em clínicas com mais de uma)
+  const unitIds = form.getAll("unitIds").filter((v): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v));
   try {
     await runCrm(ctx, async (tx, scope) => {
       const role = await roleById(tx, ids.data.roleId);
-      const has = new Set(role.permissions);
+      // Profissional da agenda ligado ao acesso, com conselho, também conta como perfil de saúde
+      const [linked] = await tx
+        .select({ id: schema.professionals.id })
+        .from(schema.professionals)
+        .where(and(eq(schema.professionals.userId, ids.data.id), eq(schema.professionals.active, true), isNotNull(schema.professionals.council), isNotNull(schema.professionals.councilNumber)))
+        .limit(1);
+      // Ponto de partida = perfil + o que vem por ser profissional de saúde; só as diferenças são gravadas
+      const has = new Set(baselinePermissions({ rolePermissions: role.permissions, baseRole: role.base, healthProfessional: !!h || !!linked }));
       const grants: string[] = [];
       const revokes: string[] = [];
       for (const [key, value] of form.entries()) {
@@ -132,12 +152,31 @@ export async function setUserAccessAction(_prev: ActionState, form: FormData): P
       }
       const rows = await tx
         .update(schema.clinicUsers)
-        .set({ roleId: role.id, role: role.base, permissionGrants: normalizePermissions(grants), permissionRevokes: normalizePermissions(revokes) })
+        .set({
+          roleId: role.id,
+          role: role.base,
+          permissionGrants: normalizePermissions(grants),
+          permissionRevokes: normalizePermissions(revokes),
+          healthCouncil: h?.council ?? null,
+          healthCouncilNumber: h?.number ?? null,
+          healthCouncilUf: h?.uf || null,
+          // Todas marcadas = sem restrição (vazio); a unidade precisa ser da clínica (RLS) e estar ativa
+          ...(form.has("unitScope")
+            ? {
+                unitIds: await (async () => {
+                  const active = (await tx.select({ id: schema.clinicUnits.id }).from(schema.clinicUnits).where(eq(schema.clinicUnits.active, true))).map((u) => u.id);
+                  const chosen = unitIds.filter((u) => active.includes(u));
+                  if (!chosen.length) throw new UserError("Marque pelo menos uma unidade.");
+                  return chosen.length === active.length ? [] : chosen;
+                })(),
+              }
+            : {}),
+        })
         .where(eq(schema.clinicUsers.id, ids.data.id))
         .returning({ id: schema.clinicUsers.id });
       if (!rows.length) throw new UserError("Pessoa não encontrada.");
       await assertAdminRemains(tx);
-      await logEvent(tx, { actorId: scope.actorId, type: "user_access_updated", data: { userId: ids.data.id, perfilNome: role.name, liberadas: grants.length, bloqueadas: revokes.length } });
+      await logEvent(tx, { actorId: scope.actorId, type: "user_access_updated", data: { userId: ids.data.id, perfilNome: role.name, liberadas: grants.length, bloqueadas: revokes.length, profissionalSaude: h ? `${h.council} ${h.number}` : null } });
     });
     refresh();
     return { ok: true, message: "Acesso atualizado. Vale a partir da próxima tela que a pessoa abrir." };

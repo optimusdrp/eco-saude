@@ -15,7 +15,7 @@ import {
 
 type Data = Record<string, unknown> | null;
 
-/** Frase para cada tipo de evento do CRM. */
+/** Frase para cada tipo de evento do Tropi. */
 export function describeEvent(type: string, data: Data, now = new Date()): string {
   const d = data ?? {};
   const when = typeof d.startsAt === "string" ? formatWhen(new Date(d.startsAt), now) : "";
@@ -81,6 +81,8 @@ export function describeEvent(type: string, data: Data, now = new Date()): strin
       return "Aviso de cancelamento enviado";
     case "welcome_sent":
       return "Boas-vindas enviada";
+    case "phone_reply":
+      return "A equipe respondeu direto no celular da clínica";
     case "after_hours_reply":
       return "Resposta automática de fora do horário";
     case "waitlist_added":

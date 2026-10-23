@@ -21,6 +21,13 @@ export interface TimePeriod {
   start: string;
   /** "12:00" */
   end: string;
+  /**
+   * Unidade de atendimento deste período (clínicas com mais de um endereço).
+   * Vazio = unidade principal. Ex.: segunda de manhã no Centro, à tarde no Bairro.
+   */
+  unitId?: string;
+  /** Consultório fixo neste período. Vazio = o Tropi escolhe um livre da unidade ao marcar. */
+  roomId?: string;
 }
 
 export interface DaySchedule {

@@ -1,0 +1,30 @@
+{
+  "event": "messages.upsert",
+  "instance": "tropi-piloto",
+  "data": {
+    "key": {
+      "id": "wamid.teste-2",
+      "remoteJid": "5551990000001@s.whatsapp.net",
+      "fromMe": false
+    },
+    "pushName": "Nome de teste",
+    "message": {
+      "imageMessage": {
+        "mime_type": "image/jpeg",
+        "id": "1234567",
+        "caption": "texto de teste"
+      }
+    },
+    "messageType": "imageMessage",
+    "messageTimestamp": 1792750500,
+    "source": "unknown",
+    "instanceId": "7f0c2b9e-0000-4000-8000-000000000001"
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "recebidas": 1,
+    "anexo": "image",
+    "cloud": "1234567"
+  }
+}

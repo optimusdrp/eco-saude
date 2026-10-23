@@ -3,6 +3,7 @@ import { FIRST_RESPONSE_TARGET_MIN, findFreeSlots, formatWhen, type Channel } fr
 import { loadWorkSchedule } from "./hours";
 import { containsText } from "./search";
 import { and, asc, desc, eq, gt, inArray, inSequence, isNotNull, isNull, lt, ne, or, schema, sql, type SQL, type Tx } from "@ecosaude/db";
+import { roomFilterFor } from "./units";
 
 /**
  * Consultas da mesa de atendimento.
@@ -140,11 +141,14 @@ export async function loadThread(tx: Tx, id: string) {
       .select({ startsAt: schema.appointments.startsAt, endsAt: schema.appointments.endsAt })
       .from(schema.appointments)
       .where(and(eq(schema.appointments.professionalId, pro.id), ne(schema.appointments.status, "cancelado"), gt(schema.appointments.endsAt, now)));
+    // Só horários com consultório livre (a busca padrão olha 14 dias)
+    const rooms = await roomFilterFor(tx, pro, now, new Date(now.getTime() + 15 * 86_400_000));
     slots = findFreeSlots({
       schedule: await loadWorkSchedule(tx, pro),
       busy,
       from: now,
       limit: 3,
+      accept: rooms.accept,
     }).map((s) => formatWhen(s.startsAt, now));
   }
 

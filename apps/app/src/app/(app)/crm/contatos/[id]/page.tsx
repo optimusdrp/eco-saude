@@ -12,7 +12,7 @@ import {
   WAITLIST_PERIOD_LABEL,
 } from "@ecosaude/core/crm";
 import { and, asc, desc, eq, or, schema, withTenant } from "@ecosaude/db";
-import { ArrowLeft, MessageCircle, ShieldCheck, ShieldOff } from "lucide-react";
+import { ArrowLeft, MessageCircle, ShieldCheck, ShieldOff, ClipboardPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -28,6 +28,7 @@ import { buttonStyles, cn } from "@/components/ui/styles";
 import { requireCrm } from "@/lib/auth/dal";
 import { now } from "@/lib/clock";
 import { completeTaskAction, resubscribeAction } from "@/modules/crm/actions/contacts";
+import { listUnits } from "@/modules/crm/units";
 import { ago, channelOptions, formatPhone } from "@/modules/crm/format";
 import { findDuplicatesFor } from "@/modules/crm/duplicates";
 import { loadPatient360 } from "@/modules/crm/patient";
@@ -65,6 +66,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
       .from(schema.professionals)
       .where(eq(schema.professionals.active, true))
       .orderBy(asc(schema.professionals.name));
+    const units = (await listUnits(tx)).filter((u) => u.active).map((u) => ({ id: u.id, name: u.name }));
     const team = await tx
       .select({ id: schema.clinicUsers.id, name: schema.clinicUsers.name })
       .from(schema.clinicUsers)
@@ -86,7 +88,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
           )[0] ?? null)
         : null,
     };
-    if (data.contact.anonymizedAt) return { ...data, pros, team, duplicates: [], privacy };
+    if (data.contact.anonymizedAt) return { ...data, pros, team, units, duplicates: [], privacy };
     // Possíveis duplicados deste cadastro (menos os já marcados como "pessoa diferente")
     const dups = ctx.can("contatos.mesclar")
       ? await findDuplicatesFor(tx, { name: data.contact.name, phone: data.contact.phone, email: data.contact.email, birthDate: data.contact.birthDate }, id)
@@ -98,11 +100,11 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
           .where(or(eq(schema.contactDuplicateDismissals.contactA, id), eq(schema.contactDuplicateDismissals.contactB, id)))
       : [];
     const duplicates = dups.filter((d) => !dismissed.some((x) => x.a === d.id || x.b === d.id));
-    return { ...data, pros, team, duplicates, privacy };
+    return { ...data, pros, team, units, duplicates, privacy };
   });
   if (!result) notFound();
 
-  const { team, duplicates, contact: c, conversations, upcoming, tasks, timeline, stats, lastNps, waitlist, bestTime, responsiveness, pros } = result;
+  const { team, duplicates, contact: c, conversations, upcoming, tasks, timeline, stats, lastNps, waitlist, bestTime, responsiveness, pros, units } = result;
 
   // Ficha com dados apagados a pedido do titular: só o aviso e os números sem identificação
   if (c.anonymizedAt) {
@@ -113,7 +115,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
           <ArrowLeft className="size-4" aria-hidden /> Contatos
         </Link>
         <section className="max-w-2xl rounded-3xl bg-paper p-5 ring-1 ring-line sm:p-6">
-          <ShieldCheck className="size-8 text-pep" aria-hidden />
+          <ShieldCheck className="size-8 text-ok" aria-hidden />
           <h1 className="mt-2 text-2xl font-bold">Dados apagados a pedido do paciente</h1>
           <p className="mt-2 text-sm text-ink-soft">
             Em {when(c.anonymizedAt)}
@@ -172,7 +174,12 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
                 <MessageCircle className="size-4" aria-hidden /> Ver conversa
               </Link>
             ) : null}
-            {canSchedule && ctx.has(CRM_FEATURES.waitlist) && !waitlist ? <AddToWaitlist professionals={pros} contact={{ id: c.id, name: c.name }} /> : null}
+            {ctx.entitlements.modules.includes("pep") && ctx.can("prontuario.ver") ? (
+              <Link href={`/prontuario/pacientes/${c.id}`} className={buttonStyles("secondary")}>
+                <ClipboardPlus className="size-4" aria-hidden /> Prontuário
+              </Link>
+            ) : null}
+            {canSchedule && ctx.has(CRM_FEATURES.waitlist) && !waitlist ? <AddToWaitlist professionals={pros} contact={{ id: c.id, name: c.name }} units={units} /> : null}
             {canEdit ? (
               <EditContactButton
                 initial={{
@@ -182,6 +189,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
                   phone: c.phone ?? "",
                   email: c.email ?? "",
                   birthDate: c.birthDate ?? "",
+                  sex: c.sex ?? "",
+                  cpf: c.cpf ?? "",
                   preferredChannel: c.preferredChannel ?? "",
                   source: c.source ?? "",
                   tags: c.tags.join(", "),
@@ -277,7 +286,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
                   {waitlist.professional ? `, ${waitlist.professional.name}` : ""}).
                 </span>
                 {canSchedule ? (
-                  <AddToWaitlist professionals={pros} contact={{ id: c.id, name: c.name }} entry={{ professionalId: waitlist.professionalId, period: waitlist.period, notes: waitlist.notes }} />
+                  <AddToWaitlist professionals={pros} contact={{ id: c.id, name: c.name }} entry={{ professionalId: waitlist.professionalId, period: waitlist.period, notes: waitlist.notes, unitId: waitlist.unitId }} units={units} />
                 ) : null}
               </div>
             ) : null}
@@ -314,7 +323,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
                   </span>
                 ))}
               </li>
-              <li className={cn("flex items-start gap-2 rounded-xl px-3 py-2", c.optedOutAt ? "bg-alert-tint" : c.consentMarketing ? "bg-pep-tint" : "bg-erp-tint")}>
+              <li className={cn("flex items-start gap-2 rounded-xl px-3 py-2", c.optedOutAt ? "bg-alert-tint" : c.consentMarketing ? "bg-ok-tint" : "bg-erp-tint")}>
                 {c.consentMarketing && !c.optedOutAt ? <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden /> : <ShieldOff className="mt-0.5 size-4 shrink-0" aria-hidden />}
                 <span>
                   {c.optedOutAt
@@ -420,7 +429,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "alert" | "good" }) {
   return (
-    <div className={cn("rounded-2xl px-3 py-2.5", tone === "alert" ? "bg-alert-tint" : tone === "good" ? "bg-pep-tint" : "bg-fog")}>
+    <div className={cn("rounded-2xl px-3 py-2.5", tone === "alert" ? "bg-alert-tint" : tone === "good" ? "bg-ok-tint" : "bg-fog")}>
       <dt className="text-xs text-ink-soft">{label}</dt>
       <dd className="font-display text-xl font-bold tabular">{value}</dd>
       {hint ? <dd className="truncate text-xs text-ink-soft">{hint}</dd> : null}

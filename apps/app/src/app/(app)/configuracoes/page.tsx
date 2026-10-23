@@ -51,9 +51,12 @@ export default async function SettingsHome() {
       () => tx.select({ enabled: schema.automationRules.enabled }).from(schema.automationRules),
       () => tx.select({ n: count() }).from(schema.messageTemplates),
       () => tx.select({ n: count() }).from(schema.clinicRoles),
+      () => tx.select({ active: schema.clinicUnits.active }).from(schema.clinicUnits),
+      () => tx.select({ n: count() }).from(schema.clinicRooms).where(eq(schema.clinicRooms.active, true)),
     ]),
   );
-  const [pros, settings, channels, replies, protocols, team, tempPasswords, rules, customTemplates, roles] = d;
+  const [pros, settings, channels, replies, protocols, team, tempPasswords, rules, customTemplates, roles, units, rooms] = d;
+  const activeUnits = units.filter((u) => u.active).length;
   const autoCfg = automationConfig(settings[0]?.automations);
   // A IA tem área própria: não entra na contagem das automações
   const aiOn = AI_FEATURES.filter((a) => autoCfg[a.key]?.enabled).length;
@@ -104,6 +107,7 @@ export default async function SettingsHome() {
     mensagens: `${MESSAGE_TEMPLATES.length} mensagens, ${customTemplates[0]?.n ?? 0} personalizadas`,
     seguranca: sem2fa ? `${sem2fa} sem verificação em 2 etapas` : "Toda a equipe com 2 etapas",
     duracoes: "Duração real por profissional e procedimento",
+    unidades: `${activeUnits} ${activeUnits === 1 ? "unidade" : "unidades"}, ${rooms[0]?.n ?? 0} ${(rooms[0]?.n ?? 0) === 1 ? "consultório" : "consultórios"}`,
     ia: aiOn ? `${aiOn} de ${AI_FEATURES.length} funcionalidades ligadas` : `Desligada. ${AI_FEATURES.length} funcionalidades disponíveis`,
     plano: `Módulos: ${entitlements.modules.map((m) => m.toUpperCase()).join(", ") || "nenhum"}. ${entitlements.features.length} funcionalidades`,
   };
@@ -144,7 +148,7 @@ export default async function SettingsHome() {
           {steps.map((s) => (
             <li key={s.label}>
               <Link href={s.href} className={cn("group flex h-full items-start gap-2.5 rounded-xl p-2.5 hover:bg-fog", s.done && "opacity-70")}>
-                {s.done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-pep" aria-hidden /> : <Circle className="mt-0.5 size-5 shrink-0 text-ink/30" aria-hidden />}
+                {s.done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-ok" aria-hidden /> : <Circle className="mt-0.5 size-5 shrink-0 text-ink/30" aria-hidden />}
                 <span className="min-w-0 flex-1">
                   <span className={cn("block text-sm font-semibold", s.done && "line-through decoration-ink/30")}>{s.label}</span>
                   {!s.done ? <span className="block text-xs text-ink-soft">{s.hint}</span> : null}

@@ -1,7 +1,7 @@
 import "server-only";
 import { messagingWindow } from "@ecosaude/channels";
-import { addDaysIso, fillTemplate, JOURNEY_STAGES, matchesFilter, RULE_TRIGGER_KEYS, todayIso, type JourneyStage, type RuleAction, type RuleCondition } from "@ecosaude/core/crm";
-import { and, eq, gt, inArray, isNotNull, schema, sql, withTenant, type Tx } from "@ecosaude/db";
+import { addDaysIso, fillTemplate, JOURNEY_STAGES, matchesFilter, PHONE_SOURCE, RULE_TRIGGER_KEYS, todayIso, type JourneyStage, type RuleAction, type RuleCondition } from "@ecosaude/core/crm";
+import { and, eq, gt, inArray, isNotNull, or, schema, sql, withTenant, type Tx } from "@ecosaude/db";
 import { logEvent, setStage } from "./journey";
 import { bestChannel, ensureConversation, queueOutbound, templateVars } from "./messaging";
 
@@ -165,8 +165,8 @@ async function conditionFails(tx: Tx, c: RuleCondition, contact: Contact, since:
           eq(schema.conversations.contactId, contact.id),
           eq(schema.messages.direction, direction),
           gt(schema.messages.createdAt, since),
-          // Resposta da equipe = mensagem com autor (as automáticas não contam)
-          direction === "out" ? isNotNull(schema.messages.authorId) : undefined,
+          // Resposta da equipe = mensagem com autor OU enviada pelo celular da clínica (as automáticas não contam)
+          direction === "out" ? or(isNotNull(schema.messages.authorId), sql`${schema.messages.meta}->>'source' = ${PHONE_SOURCE}`) : undefined,
         ),
       )
       .limit(1);

@@ -238,7 +238,7 @@ function ManagerScreen() {
         <div className="rounded-lg bg-paper p-2.5">
           <p className="text-ink-soft">Faltas</p>
           <p className="font-display text-2xl font-bold">6%</p>
-          <p className="text-[0.7rem] text-pep-ink">3 pontos a menos</p>
+          <p className="text-[0.7rem] text-ok-ink">3 pontos a menos</p>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Keyboard,
   List,
+  MapPin,
   Printer,
   RotateCcw,
   Search,
@@ -87,7 +88,8 @@ export function AgendaBoard({ data, canConfigure }: { data: AgendaData; canConfi
   const liveNow = useNow(30_000);
   const nowMin = data.nowMin + Math.max(0, Math.floor((liveNow - data.serverNowMs) / 60_000));
 
-  const href = (date: string, view: AgendaView = data.view) => `/crm/agenda?data=${date}${view !== "dia" ? `&visao=${view}` : ""}`;
+  const href = (date: string, view: AgendaView = data.view, unit: string | null = data.unitId) =>
+    `/crm/agenda?data=${date}${view !== "dia" ? `&visao=${view}` : ""}${unit ? `&unidade=${unit}` : ""}`;
   const step = data.view === "semana" ? 7 : 1;
   const prevHref = href(addDaysIso(data.date, -step));
   const nextHref = href(addDaysIso(data.date, step));
@@ -322,6 +324,26 @@ export function AgendaBoard({ data, canConfigure }: { data: AgendaData; canConfi
           </div>
           <h1 className="order-first min-w-0 basis-full truncate font-display sm:order-none sm:flex-1 sm:basis-auto text-xl font-bold first-letter:uppercase sm:text-2xl">{periodLabel}</h1>
 
+          {/* Unidade (clínica com mais de um endereço): a agenda mostra os profissionais e consultas de lá */}
+          {data.units.length > 1 || (data.units.length === 1 && !data.allUnits) ? (
+            <label className="flex items-center gap-1.5 rounded-xl bg-paper p-1 pl-3 ring-1 ring-line">
+              <MapPin className="size-4 text-ink-soft" aria-hidden />
+              <span className="sr-only">Unidade</span>
+              <select
+                value={data.unitId ?? ""}
+                onChange={(e) => router.push(href(data.date, data.view, e.target.value || null))}
+                className="min-h-10 max-w-[12rem] rounded-lg bg-paper pr-1 text-sm font-semibold"
+              >
+                {data.allUnits ? <option value="">Todas as unidades</option> : null}
+                {data.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <nav aria-label="Visão" className="flex rounded-xl bg-paper p-1 ring-1 ring-line">
             {(Object.keys(VIEW_LABEL) as AgendaView[]).map((v) => {
               const Icon = VIEW_ICON[v];
@@ -459,6 +481,8 @@ export function AgendaBoard({ data, canConfigure }: { data: AgendaData; canConfi
         appt={selected}
         onClose={() => setSelectedId(null)}
         canEdit={data.canEdit}
+        pep={data.pep}
+        rooms={data.rooms}
         features={data.features}
         professionals={data.professionals.map((p) => ({ id: p.id, name: p.name }))}
         today={data.today}

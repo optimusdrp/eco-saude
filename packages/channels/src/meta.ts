@@ -79,7 +79,7 @@ const WA_KIND: Record<string, AttachmentKind> = { image: "image", sticker: "imag
 /** O simulador usa "sim:<chave>" no lugar do ID da Meta (o arquivo já está guardado) */
 const waRef = (id: string): MediaRef => (id.startsWith("sim:") ? { provider: "simulado", key: id.slice(4) } : { provider: "whatsapp", mediaId: id });
 
-/** Messenger/Instagram: tipo do anexo -> tipo do CRM */
+/** Messenger/Instagram: tipo do anexo -> tipo do Tropi */
 const MSG_KIND: Record<string, AttachmentKind> = { image: "image", audio: "audio", video: "video", file: "document" };
 
 const WHATSAPP_STATUS: Record<string, StatusUpdate["status"]> = {
@@ -229,6 +229,10 @@ async function graphPost(fetchFn: FetchLike, url: string, token: string, payload
   return data;
 }
 
+/** Raiz da Graph API (Facebook) e da API do Instagram com login do Instagram */
+const graphRoot = (c: ChannelCredentials) => `${(c.graphBase ?? "https://graph.facebook.com").replace(/\/+$/, "")}/${c.graphVersion ?? DEFAULT_GRAPH_VERSION}`;
+const instagramRoot = (c: ChannelCredentials) => `${(c.instagramBase ?? "https://graph.instagram.com").replace(/\/+$/, "")}/${c.graphVersion ?? DEFAULT_GRAPH_VERSION}`;
+
 function requireCreds(creds: ChannelCredentials, keys: (keyof ChannelCredentials)[], channel: string) {
   const missing = keys.filter((k) => !creds[k]);
   if (missing.length) throw new ChannelError(`Credenciais ausentes para ${channel}: ${missing.join(", ")}`, false);
@@ -241,8 +245,8 @@ export function createWhatsAppAdapter(creds: ChannelCredentials, fetchFn: FetchL
     parseWebhook: parseWhatsAppWebhook,
     async send(message: OutboundMessage) {
       requireCreds(creds, ["accessToken", "phoneNumberId"], "WhatsApp");
-      const url = `https://graph.facebook.com/${creds.graphVersion ?? DEFAULT_GRAPH_VERSION}/${creds.phoneNumberId}/messages`;
-      const base = `https://graph.facebook.com/${creds.graphVersion ?? DEFAULT_GRAPH_VERSION}/${creds.phoneNumberId}`;
+      const url = `${graphRoot(creds)}/${creds.phoneNumberId}/messages`;
+      const base = `${graphRoot(creds)}/${creds.phoneNumberId}`;
       if (message.media) {
         // 1) sobe o arquivo para a Meta (devolve um ID); 2) manda a mensagem com o ID
         const form = new FormData();
@@ -285,7 +289,7 @@ export function createWhatsAppAdapter(creds: ChannelCredentials, fetchFn: FetchL
     async downloadMedia(ref, maxBytes) {
       if (ref.provider !== "whatsapp") throw new ChannelError("Referência de arquivo de outro canal.", false);
       requireCreds(creds, ["accessToken"], "WhatsApp");
-      const info = await graphGet(fetchFn, `https://graph.facebook.com/${creds.graphVersion ?? DEFAULT_GRAPH_VERSION}/${ref.mediaId}`, creds.accessToken!);
+      const info = await graphGet(fetchFn, `${graphRoot(creds)}/${ref.mediaId}`, creds.accessToken!);
       const url = str(info.url);
       if (!url) throw new ChannelError("WhatsApp não devolveu o link do arquivo.", true);
       if (Number(info.file_size ?? 0) > maxBytes) throw new ChannelError("Arquivo maior que o limite.", false);
@@ -315,8 +319,20 @@ export function createMessagingAdapter(channel: "facebook" | "instagram", creds:
     parseWebhook: (body) => parseMessagingWebhook(body, channel),
     async send(message: OutboundMessage) {
       requireCreds(creds, ["accessToken", "accountId"], channel === "facebook" ? "Messenger" : "Instagram");
-      const base = `https://graph.facebook.com/${creds.graphVersion ?? DEFAULT_GRAPH_VERSION}/${creds.accountId}`;
+      // Instagram com login do Instagram: graph.instagram.com (não precisa de página do Facebook)
+      const igLogin = channel === "instagram" && creds.kind === "instagram_login";
+      const base = igLogin ? `${instagramRoot(creds)}/${creds.accountId}` : `${graphRoot(creds)}/${creds.accountId}`;
       const url = `${base}/messages`;
+      // Instagram: anexo vai por LINK (o Tropi gera um link temporário e assinado para o arquivo)
+      if (message.media && channel === "instagram" && (message.media.publicUrl || igLogin)) {
+        if (!message.media.publicUrl) throw new ChannelError("O Instagram só aceita anexo por link: defina APP_URL no servidor.", false);
+        const type = message.media.kind === "document" ? "file" : message.media.kind;
+        const sent = await graphPost(fetchFn, url, creds.accessToken!, { recipient: { id: message.to }, message: { attachment: { type, payload: { url: message.media.publicUrl } } } });
+        const id = str(sent.message_id);
+        if (!id) throw new ChannelError("A Meta não devolveu o ID da mensagem.", true);
+        if (message.text.trim()) await graphPost(fetchFn, url, creds.accessToken!, { recipient: { id: message.to }, message: { text: message.text } });
+        return { externalMessageId: id };
+      }
       if (message.media) {
         // 1) sobe o arquivo (Attachment Upload API); 2) manda a mensagem com o attachment_id
         const type = message.media.kind === "document" ? "file" : message.media.kind;
@@ -421,4 +437,50 @@ export function sampleMessagingPayload(channel: "facebook" | "instagram", p: { a
       },
     ],
   };
+}
+
+/* ------------------------- Conexão por clínica (tela) ----------------------- */
+
+/**
+ * Confere o token de uma PÁGINA do Facebook e liga os eventos de mensagem dela ao app do Tropi.
+ * Sem o "subscribed_apps", a Meta não manda nenhum webhook da página (erro comum).
+ */
+export async function connectFacebookPage(creds: ChannelCredentials, fetchFn: FetchLike = fetch as unknown as FetchLike): Promise<{ pageId: string; name: string }> {
+  requireCreds(creds, ["accessToken"], "Messenger");
+  const me = await graphGet(fetchFn, `${graphRoot(creds)}/me?fields=id,name`, creds.accessToken!);
+  const pageId = str(me.id);
+  if (!pageId) throw new ChannelError("Token inválido: a Meta não devolveu a página. Use o token DA PÁGINA (não o do usuário).", false);
+  await graphPost(fetchFn, `${graphRoot(creds)}/${pageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,message_reads,message_deliveries`, creds.accessToken!, {});
+  return { pageId, name: str(me.name) ?? pageId };
+}
+
+/**
+ * Instagram. Dois caminhos:
+ *  - instagram_login: token do Instagram (graph.instagram.com/me) e inscrição em "messages"
+ *  - facebook_login:  token da página ligada à conta profissional (instagram_business_account)
+ */
+export async function connectInstagram(creds: ChannelCredentials, fetchFn: FetchLike = fetch as unknown as FetchLike): Promise<{ accountId: string; username: string }> {
+  requireCreds(creds, ["accessToken"], "Instagram");
+  if (creds.kind === "instagram_login") {
+    const me = await graphGet(fetchFn, `${instagramRoot(creds)}/me?fields=user_id,username`, creds.accessToken!);
+    const accountId = str(me.user_id) ?? str(me.id);
+    if (!accountId) throw new ChannelError("Token do Instagram inválido.", false);
+    await graphPost(fetchFn, `${instagramRoot(creds)}/me/subscribed_apps?subscribed_fields=messages,messaging_seen`, creds.accessToken!, {});
+    return { accountId, username: str(me.username) ?? accountId };
+  }
+  const me = await graphGet(fetchFn, `${graphRoot(creds)}/me?fields=id,name,instagram_business_account{id,username}`, creds.accessToken!);
+  const ig = obj(me.instagram_business_account);
+  const accountId = str(ig.id);
+  if (!accountId) throw new ChannelError("Esta página não tem uma conta profissional do Instagram ligada.", false);
+  await graphPost(fetchFn, `${graphRoot(creds)}/${str(me.id)}/subscribed_apps?subscribed_fields=messages`, creds.accessToken!, {});
+  return { accountId, username: str(ig.username) ?? accountId };
+}
+
+/** WhatsApp Cloud API direto: confere o token e o Phone number ID e devolve o número exibido. */
+export async function whatsAppNumberInfo(creds: ChannelCredentials, fetchFn: FetchLike = fetch as unknown as FetchLike): Promise<{ displayPhone: string; verifiedName?: string }> {
+  requireCreds(creds, ["accessToken", "phoneNumberId"], "WhatsApp");
+  const info = await graphGet(fetchFn, `${graphRoot(creds)}/${creds.phoneNumberId}?fields=display_phone_number,verified_name`, creds.accessToken!);
+  const displayPhone = str(info.display_phone_number);
+  if (!displayPhone) throw new ChannelError("A Meta não reconheceu este Phone number ID com este token.", false);
+  return { displayPhone, verifiedName: str(info.verified_name) };
 }

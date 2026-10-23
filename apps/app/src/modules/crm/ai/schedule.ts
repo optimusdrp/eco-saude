@@ -23,6 +23,7 @@ import { automationSettings } from "../automation-settings";
 import { loadWorkSchedule } from "../hours";
 import type { CrmScope } from "../scope";
 import { aiConfigured, AiError, generate } from "./provider";
+import { roomFilterFor } from "@/modules/crm/units";
 
 /**
  * AGENDAR PELO PEDIDO (orquestração)
@@ -33,7 +34,7 @@ import { aiConfigured, AiError, generate } from "./provider";
  *      direto ao plano B: IA desligada em Ajustes, sem chave, conversa com sinal de
  *      urgência, limite por pessoa.
  *   2. attemptSchedule (fora): IA + conferência. Falha, demora, resposta recusada ou
- *      certeza abaixo de 40% = PLANO B (expressões do CRM), com o motivo visível.
+ *      certeza abaixo de 40% = PLANO B (expressões do Tropi), com o motivo visível.
  *   3. saveSchedule (transação): calcula os HORÁRIOS LIVRES REAIS do profissional e
  *      filtra pelo pedido; grava o que foi entendido e os horários sugeridos em
  *      ai_schedule_suggestions (auditoria e medição: virou consulta? usou o sugerido?).
@@ -176,7 +177,9 @@ export async function saveSchedule(tx: Tx, scope: CrmScope, plan: SchedulePlan, 
     .select({ startsAt: schema.appointments.startsAt, endsAt: schema.appointments.endsAt })
     .from(schema.appointments)
     .where(and(eq(schema.appointments.professionalId, pro.id), ne(schema.appointments.status, "cancelado"), gt(schema.appointments.endsAt, now), lt(schema.appointments.startsAt, until)));
-  const free: FreeSlot[] = findFreeSlots({ schedule: await loadWorkSchedule(tx, pro), busy, from: now, days: plan.calendar.length, limit: 500, period: r.period }).map((s) => {
+  // Só horários com consultório livre (mesma regra da marcação)
+  const rooms = await roomFilterFor(tx, pro, now, until);
+  const free: FreeSlot[] = findFreeSlots({ schedule: await loadWorkSchedule(tx, pro), busy, from: now, days: plan.calendar.length, limit: 500, period: r.period, accept: rooms.accept }).map((s) => {
     const z = utcToZoned(s.startsAt);
     return { startsAt: s.startsAt.toISOString(), date: z.date, time: z.time, label: formatWhen(s.startsAt, now) };
   });

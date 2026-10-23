@@ -82,6 +82,10 @@ export interface TodayData {
   dayStartMs: number;
   serverNowMs: number;
   canEdit: boolean;
+  /** Prontuário contratado e o perfil atende: mostra "Iniciar atendimento" na consulta */
+  pep?: boolean;
+  /** Consultórios ativos (trocar o consultório da consulta) */
+  rooms: { id: string; unitId: string; name: string }[];
   features: { inbox: boolean; confirmations: boolean; waitlist: boolean; noShowRisk: boolean; campaigns: boolean };
   /** Permissões do perfil para as ações da consulta */
   perms: { cancel: boolean; confirm: boolean; waitlist: boolean };

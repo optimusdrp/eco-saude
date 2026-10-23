@@ -13,7 +13,7 @@
  * - `client_id` em mensagens e eventos: reenviar a mesma ação não duplica
  * - `version` em contatos e consultas: detecta edição simultânea (conflito)
  */
-import type { RuleAction, RuleCondition, RuleFilter, WeeklySchedule } from "@ecosaude/core/crm";
+import type { ClosureKind, OpeningHours, RoomKind, RuleAction, RuleCondition, RuleFilter, WeeklySchedule } from "@ecosaude/core/crm";
 import { APPOINTMENT_STATUSES, CHANNEL_MODES, CHANNELS, CLINIC_ROLES, CONVERSATION_STATUSES, JOURNEY_STAGES, MESSAGE_DIRECTIONS, MESSAGE_STATUSES, WAITLIST_PERIODS } from "@ecosaude/core/crm";
 import { relations, sql } from "drizzle-orm";
 import { boolean, date, index, inet, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
@@ -104,6 +104,22 @@ export const clinicUsers = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'`),
+    /**
+     * Unidades em que a pessoa trabalha (agenda, Hoje e Consultório mostram só elas).
+     * Vazio = todas as unidades.
+     */
+    unitIds: uuid("unit_ids")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
+    /**
+     * PERFIL DE PROFISSIONAL DE SAÚDE (registro no conselho: CRM, CRO, COREN, CRP, CRN...).
+     * Só quem tem este perfil (aqui ou num profissional da agenda ligado ao acesso) lê e registra
+     * conteúdo clínico no Prontuário, qualquer que seja o cargo (ex.: gestora que também é médica).
+     */
+    healthCouncil: text("health_council"),
+    healthCouncilNumber: text("health_council_number"),
+    healthCouncilUf: text("health_council_uf"),
     active: boolean("active").notNull().default(true),
     mustChangePassword: boolean("must_change_password").notNull().default(true),
     totpSecretEnc: text("totp_secret_enc"),
@@ -180,6 +196,92 @@ export const authThrottle = pgTable(
   (t) => [index("auth_throttle_idx").on(t.bucket, t.keyHash, t.createdAt)],
 );
 
+/* -------------------------- Unidades e consultórios ------------------------ */
+
+/**
+ * Unidade de atendimento: cada endereço onde a clínica atende. Toda clínica tem uma
+ * principal (main), criada sozinha; quem tem um endereço só nem vê a escolha nas telas.
+ * O endereço, o telefone e o CNES da unidade vão no cabeçalho dos documentos clínicos.
+ */
+export const clinicUnits = pgTable(
+  "clinic_units",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clinicId: clinicId(),
+    name: text("name").notNull(),
+    main: boolean("main").notNull().default(false),
+    address: text("address"),
+    district: text("district"),
+    city: text("city"),
+    state: text("state"),
+    zip: text("zip"),
+    phone: text("phone"),
+    /** Cadastro Nacional de Estabelecimentos de Saúde (cada endereço tem o seu) */
+    cnes: text("cnes"),
+    /**
+     * Horário de funcionamento (dias e períodos). null = herda: a unidade principal usa o padrão
+     * (seg a sex, 8h às 18h) e as demais, o da principal. {} = não abre em nenhum dia.
+     */
+    openingHours: jsonb("opening_hours").$type<OpeningHours>(),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("clinic_units_name_unique").on(t.clinicId, sql`lower(${t.name})`),
+    uniqueIndex("clinic_units_main_unique")
+      .on(t.clinicId)
+      .where(sql`${t.main}`),
+  ],
+);
+
+/**
+ * FERIADOS E FECHAMENTOS: dias em que a clínica (unit_id nulo) ou uma unidade não atende.
+ * Bloqueiam os horários livres da unidade, avisam na marcação e mudam a resposta automática.
+ * `national` = trazido pela lista de feriados nacionais (não repete ao trazer de novo).
+ */
+export const clinicClosures = pgTable(
+  "clinic_closures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clinicId: clinicId(),
+    unitId: uuid("unit_id").references(() => clinicUnits.id, { onDelete: "cascade" }),
+    startsOn: date("starts_on").notNull(),
+    endsOn: date("ends_on").notNull(),
+    reason: text("reason").notNull(),
+    kind: text("kind").$type<ClosureKind>().notNull().default("feriado"),
+    national: boolean("national").notNull().default(false),
+    createdBy: uuid("created_by").references(() => clinicUsers.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("clinic_closures_dates_idx").on(t.clinicId, t.endsOn, t.startsOn),
+    uniqueIndex("clinic_closures_national_unique")
+      .on(t.clinicId, t.startsOn)
+      .where(sql`${t.national}`),
+  ],
+);
+
+/** Consultório ou sala de uma unidade. Duas consultas no mesmo consultório ao mesmo tempo: o banco recusa. */
+export const clinicRooms = pgTable(
+  "clinic_rooms",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clinicId: clinicId(),
+    unitId: uuid("unit_id")
+      .notNull()
+      .references(() => clinicUnits.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    kind: text("kind").$type<RoomKind>().notNull().default("consultorio"),
+    notes: text("notes"),
+    active: boolean("active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("clinic_rooms_name_unique").on(t.unitId, sql`lower(${t.name})`), index("clinic_rooms_unit_idx").on(t.clinicId, t.unitId)],
+);
+
 /* ------------------------------- Profissionais ----------------------------- */
 
 export const professionals = pgTable(
@@ -208,6 +310,13 @@ export const professionals = pgTable(
      * início, último fim, primeiro intervalo) para relatórios e compatibilidade.
      */
     weeklySchedule: jsonb("weekly_schedule").$type<WeeklySchedule>(),
+    /**
+     * Registro no conselho (CRM, CRO, CRP, CRN...): vai na receita, no atestado e nos demais
+     * documentos do Tropi Prontuário. Ex.: council "CRM", number "12345", uf "RS".
+     */
+    council: text("council"),
+    councilNumber: text("council_number"),
+    councilUf: text("council_uf"),
     active: boolean("active").notNull().default(true),
     createdAt: createdAt(),
   },
@@ -248,6 +357,10 @@ export const contacts = pgTable(
     phone: text("phone"),
     email: text("email"),
     birthDate: date("birth_date"),
+    /** Sexo biológico (F/M): usado no prontuário (referências e documentos). Vazio = não informado */
+    sex: text("sex"),
+    /** CPF (só números): identificação nos documentos clínicos (receita, atestado) e integrações */
+    cpf: text("cpf"),
     stage: journeyStageEnum("stage").notNull().default("novo"),
     stageChangedAt: timestamp("stage_changed_at", { withTimezone: true }).notNull().defaultNow(),
     lostReason: text("lost_reason"),
@@ -399,6 +512,10 @@ export const messages = pgTable(
     index("messages_queue_idx")
       .on(t.status)
       .where(sql`${t.status} = 'fila'`),
+    // Ritmo do WhatsApp do celular: quantas saíram no último minuto e na última hora
+    index("messages_sent_out_idx")
+      .on(t.clinicId, t.channel, t.sentAt)
+      .where(sql`${t.direction} = 'out' and ${t.sentAt} is not null`),
   ],
 );
 
@@ -415,6 +532,10 @@ export const appointments = pgTable(
     professionalId: uuid("professional_id")
       .notNull()
       .references(() => professionals.id, { onDelete: "restrict" }),
+    /** Unidade onde a consulta acontece (vem do período da semana do profissional) */
+    unitId: uuid("unit_id").references(() => clinicUnits.id, { onDelete: "restrict" }),
+    /** Consultório (fixo do período, escolhido sozinho entre os livres, ou trocado na consulta) */
+    roomId: uuid("room_id").references(() => clinicRooms.id, { onDelete: "set null" }),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     status: appointmentStatusEnum("status").notNull().default("agendado"),
@@ -443,6 +564,7 @@ export const appointments = pgTable(
   (t) => [
     index("appointments_clinic_start_idx").on(t.clinicId, t.startsAt),
     index("appointments_contact_idx").on(t.contactId),
+    index("appointments_unit_start_idx").on(t.clinicId, t.unitId, t.startsAt),
     // + restrição de "sem horário duplicado" por profissional (migração 0005, extensão btree_gist)
   ],
 );
@@ -457,6 +579,8 @@ export const waitlistEntries = pgTable(
       .references(() => contacts.id, { onDelete: "cascade" }),
     /** null = qualquer profissional */
     professionalId: uuid("professional_id").references(() => professionals.id, { onDelete: "set null" }),
+    /** Unidade em que o paciente aceita ser atendido (null = qualquer) */
+    unitId: uuid("unit_id").references(() => clinicUnits.id, { onDelete: "set null" }),
     period: waitlistPeriodEnum("period").notNull().default("qualquer"),
     notes: text("notes"),
     status: waitlistStatusEnum("status").notNull().default("aguardando"),
@@ -1186,6 +1310,32 @@ export const channelConnections = pgTable(
      * ou cofre de segredos (AWS Secrets Manager).
      */
     externalAccountId: text("external_account_id"),
+    /**
+     * Como o canal se conecta (CONNECTION_KINDS): QR code, Cloud API via Evolution,
+     * Cloud API direto, login do Instagram, página, bot. Vazio = ainda não escolhido.
+     * Na Evolution, external_account_id é o NOME DA INSTÂNCIA (é por ele que o webhook acha a clínica).
+     */
+    kind: text("kind"),
+    /** Estado da conexão com o provedor (CONNECTION_STATES) e desde quando */
+    connectionState: text("connection_state").notNull().default("desconectado"),
+    stateAt: timestamp("state_at", { withTimezone: true }),
+    /** Último erro do provedor (para a tela mostrar o motivo) */
+    lastError: text("last_error"),
+    /**
+     * Tokens DESTA clínica (página, Instagram, bot) criptografados com AES-256-GCM
+     * (chave do servidor). Nunca voltam para a tela; sem eles, vale o token do ambiente.
+     */
+    credentialsEnc: text("credentials_enc"),
+    /**
+     * Ritmo de envio das mensagens AUTOMÁTICAS no WhatsApp do celular (PacingConfig de
+     * @ecosaude/core/crm: sugestão escolhida ou números personalizados). Vazio = "cauteloso".
+     */
+    pacing: jsonb("pacing"),
+    /**
+     * Quando pode sair a próxima automática por este número. Reservado de forma atômica a cada
+     * envio (agora + intervalo sorteado): dois despachos ao mesmo tempo nunca furam o intervalo.
+     */
+    paceNextAt: timestamp("pace_next_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1241,7 +1391,12 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
   contact: one(contacts, { fields: [appointments.contactId], references: [contacts.id] }),
   professional: one(professionals, { fields: [appointments.professionalId], references: [professionals.id] }),
+  unit: one(clinicUnits, { fields: [appointments.unitId], references: [clinicUnits.id] }),
+  room: one(clinicRooms, { fields: [appointments.roomId], references: [clinicRooms.id] }),
 }));
+
+export const clinicUnitsRelations = relations(clinicUnits, ({ many }) => ({ rooms: many(clinicRooms) }));
+export const clinicRoomsRelations = relations(clinicRooms, ({ one }) => ({ unit: one(clinicUnits, { fields: [clinicRooms.unitId], references: [clinicUnits.id] }) }));
 
 export const waitlistEntriesRelations = relations(waitlistEntries, ({ one }) => ({
   contact: one(contacts, { fields: [waitlistEntries.contactId], references: [contacts.id] }),
@@ -1374,4 +1529,48 @@ export const storageDeletions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("storage_deletions_idx").on(t.clinicId, t.createdAt)],
+);
+
+/* ------------------------------ Avisos (sino) ------------------------------- */
+
+/** Tipos de aviso para a equipe. Cada um nasce de um evento já auditado em outro lugar. */
+export const USER_NOTICE_KINDS = ["pep_emergencia", "triagem_urgente"] as const;
+export type UserNoticeKind = (typeof USER_NOTICE_KINDS)[number];
+
+/**
+ * Avisos para UMA pessoa da equipe (o sino da barra superior).
+ *
+ * - Um registro por destinatário: cada um tem o próprio "lido".
+ * - `refId` aponta o evento de origem (registro de acesso, triagem). O índice único
+ *   (pessoa, tipo, origem) impede aviso repetido para o mesmo evento.
+ * - LGPD: o texto pode citar o paciente (só quem já tem direito de ver aquele evento recebe);
+ *   a anonimização apaga os avisos do paciente e a rotina apaga os com mais de 90 dias.
+ *   O registro permanente fica na auditoria do prontuário (pep_audit), não aqui.
+ */
+export const userNotices = pgTable(
+  "user_notices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clinicId: clinicId(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => clinicUsers.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<UserNoticeKind>().notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    /** Tela que resolve o aviso (caminho interno, ex.: /prontuario/ajustes) */
+    href: text("href").notNull(),
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "cascade" }),
+    refId: uuid("ref_id").notNull(),
+    /** urgente = destaque vermelho no sino */
+    urgent: boolean("urgent").notNull().default(false),
+    createdAt: createdAt(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    emailedAt: timestamp("emailed_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("user_notices_once").on(t.userId, t.kind, t.refId),
+    index("user_notices_user_idx").on(t.clinicId, t.userId, t.createdAt),
+    index("user_notices_ref_idx").on(t.clinicId, t.refId),
+  ],
 );

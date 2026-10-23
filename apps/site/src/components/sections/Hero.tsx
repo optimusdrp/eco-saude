@@ -3,6 +3,7 @@ import { buttonStyles } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { moduleColor } from "@/components/ui/ModuleTag";
 import { modules } from "@/content/modules";
+import { siteConfig } from "@/content/site";
 import { cn } from "@/lib/cn";
 
 /**
@@ -19,15 +20,15 @@ export function Hero() {
             id="hero-title"
             className="text-[2.5rem] font-extrabold xs:text-5xl sm:text-6xl lg:text-[3.4rem] xl:text-[4.1rem]"
           >
-            A clínica inteira num só ambiente, que muda conforme quem usa.
+            {siteConfig.tagline}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-soft sm:text-xl">
-            CRM, ERP, Prontuário Eletrônico e BI que você contrata separadamente e usa
-            juntos, com o mesmo login. Se a internet cair, a clínica continua atendendo.
+            Atendimento, Gestão, Prontuário e Indicadores: módulos que você contrata separadamente e usa
+            juntos, com o mesmo login. A tela muda conforme quem usa e, se a internet cair, a clínica continua atendendo.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 xs:flex-row">
-            <a href="#demonstracao" className={buttonStyles({ size: "lg" })}>
+            <a href="#demonstracao" className={buttonStyles({ variant: "sun", size: "lg" })}>
               Pedir demonstração
             </a>
             <a href="#ecossistema" className={buttonStyles({ variant: "secondary", size: "lg" })}>

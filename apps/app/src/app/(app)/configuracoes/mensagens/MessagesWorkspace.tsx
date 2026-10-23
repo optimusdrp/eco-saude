@@ -205,7 +205,7 @@ function Editor({ t, clinicName, canAutomations }: { t: TemplateView; clinicName
               />
               <span className="text-sm">
                 <span className="block font-semibold">Enviar esta mensagem</span>
-                <span className="block text-xs text-ink-soft">Desligada, o CRM continua fazendo a ação, só não manda o texto.</span>
+                <span className="block text-xs text-ink-soft">Desligada, o Tropi continua fazendo a ação, só não manda o texto.</span>
               </span>
             </label>
           ) : null}

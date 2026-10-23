@@ -327,7 +327,7 @@ export function describeDraft(rule: RuleDefinition, ctx: Pick<RuleTextContext, "
 
 export function buildRuleTextPrompt(text: string, ctx: RuleTextContext): { system: string; user: string } {
   const system = [
-    "Você transforma o pedido de um gestor de clínica, em português, em UMA regra de automação do CRM no formato Quando → Espera → Se → Então.",
+    "Você transforma o pedido de um gestor de clínica, em português, em UMA regra de automação do Tropi no formato Quando → Espera → Se → Então.",
     "Use SOMENTE os códigos do catálogo. Se algo do pedido não existir no catálogo, deixe de fora e explique em duvidas.",
     "Gatilhos (gatilho): " + RULE_TRIGGERS.map((x) => `${x.key} = ${x.label}`).join("; ") + ".",
     'Filtros: palavras (só para message_in, palavras separadas por vírgula), etapa (stage_changed), status (appointment_status), notaMin/notaMax (nps, 0 a 10), canal. Use "" ou -1 quando não houver.',

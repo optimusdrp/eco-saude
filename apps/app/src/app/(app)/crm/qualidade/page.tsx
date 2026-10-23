@@ -232,7 +232,7 @@ export default async function QualityPage({ searchParams }: { searchParams: Prom
                   </dl>
                   {a.strength ? (
                     <p className="mt-3 flex gap-2 text-sm">
-                      <ThumbsUp className="mt-0.5 size-4 shrink-0 text-pep" aria-hidden />
+                      <ThumbsUp className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden />
                       <span>
                         <span className="sr-only">Ponto forte: </span>
                         {a.strength}
@@ -277,7 +277,7 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[m]! : Math.round((s[m - 1]! + s[m]!) / 2);
 }
 
-const tone = (v: number) => (v >= 8 ? "bg-pep-tint text-pep-ink" : v >= 6 ? "bg-erp-tint text-erp-ink" : "bg-alert-tint text-alert");
+const tone = (v: number) => (v >= 8 ? "bg-ok-tint text-ok-ink" : v >= 6 ? "bg-erp-tint text-erp-ink" : "bg-alert-tint text-alert");
 
 function ScorePill({ v, big }: { v: number | null; big?: boolean }) {
   if (v === null) return <span className="text-ink-soft">—</span>;
@@ -301,7 +301,7 @@ function Bar({ label, v }: { label: string; v: number | null }) {
         ) : (
           <>
             <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fog" aria-hidden>
-              <span className={cn("block h-full rounded-full", v >= 8 ? "bg-pep" : v >= 6 ? "bg-erp" : "bg-alert")} style={{ width: `${v * 10}%` }} />
+              <span className={cn("block h-full rounded-full", v >= 8 ? "bg-ok" : v >= 6 ? "bg-erp" : "bg-alert")} style={{ width: `${v * 10}%` }} />
             </span>
             <span className="w-7 text-right text-xs font-semibold tabular">{formatScore(v)}</span>
           </>

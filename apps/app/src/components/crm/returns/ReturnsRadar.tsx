@@ -343,7 +343,7 @@ export function ReturnsRadar({ data }: { data: ReturnsData }) {
                     </span>
                     {conv !== null ? (
                       <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-paper" role="img" aria-label={`${conv}% voltaram a agendar`}>
-                        <span className="block h-full rounded-full bg-pep" style={{ width: `${conv}%` }} />
+                        <span className="block h-full rounded-full bg-ok" style={{ width: `${conv}%` }} />
                       </span>
                     ) : null}
                   </button>

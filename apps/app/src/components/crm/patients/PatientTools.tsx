@@ -159,7 +159,7 @@ const kindStyle: Record<TimelineKind, { dot: string; icon: typeof MessageCircle;
   out: { dot: "bg-ink text-white", icon: MessageCircle, label: "Clínica" },
   system: { dot: "bg-bi text-white", icon: Zap, label: "Automático" },
   note: { dot: "bg-erp text-ink", icon: StickyNote, label: "Anotação" },
-  appointment: { dot: "bg-pep text-white", icon: CalendarDays, label: "Consulta" },
+  appointment: { dot: "bg-ok text-white", icon: CalendarDays, label: "Consulta" },
   event: { dot: "bg-fog text-ink-soft ring-1 ring-line", icon: Zap, label: "Registro" },
 };
 
@@ -216,7 +216,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                   i.kind === "in" && "bg-crm-tint",
                   i.kind === "out" && "bg-fog",
                   i.kind === "note" && "bg-erp-tint",
-                  i.kind === "appointment" && "bg-pep-tint",
+                  i.kind === "appointment" && "bg-ok-tint",
                   (i.kind === "event" || i.kind === "system") && "bg-paper ring-1 ring-line",
                 )}
               >

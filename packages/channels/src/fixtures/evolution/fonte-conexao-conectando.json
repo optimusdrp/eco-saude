@@ -1,0 +1,15 @@
+{
+  "event": "connection.update",
+  "instance": "tropi-piloto",
+  "data": {
+    "instance": "tropi-piloto",
+    "state": "connecting",
+    "statusReason": 200
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "conexao": "connecting",
+    "tela": "conectando"
+  }
+}

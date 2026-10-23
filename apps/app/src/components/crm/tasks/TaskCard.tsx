@@ -85,7 +85,7 @@ export function TaskCard({
           title={t.done ? "Reabrir" : "Concluir"}
           className={cn(
             "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ring-2 transition-colors",
-            t.done ? "bg-pep text-white ring-pep" : "text-transparent ring-ink/25 hover:bg-pep-tint hover:text-pep hover:ring-pep",
+            t.done ? "bg-ok text-white ring-ok" : "text-transparent ring-ink/25 hover:bg-ok-tint hover:text-ok hover:ring-ok",
           )}
         >
           <Check className="size-4" aria-hidden />

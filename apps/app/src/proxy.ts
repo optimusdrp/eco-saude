@@ -6,7 +6,9 @@ import { NextResponse, type NextRequest } from "next/server";
  * Webhooks e rotinas agendadas têm autenticação própria (assinatura/segredo).
  */
 const SESSION_COOKIE = "eco_app_session";
-const PUBLIC_PREFIXES = ["/login", "/api/webhooks/", "/api/cron/"];
+// /api/midia/: link temporário e ASSINADO de anexo enviado (o Instagram busca o arquivo por link)
+// /documento: verificação pública de receita/atestado pelo código impresso (farmácia, escola, empresa)
+const PUBLIC_PREFIXES = ["/login", "/api/webhooks/", "/api/cron/", "/api/midia/", "/documento"];
 
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

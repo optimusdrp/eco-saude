@@ -1,4 +1,4 @@
-import { CRM_FEATURES, daysBetween, findFreeSlots, formatWhen, matchesPeriod, relativeDay, utcToZoned } from "@ecosaude/core/crm";
+import { CRM_FEATURES, daysBetween, findFreeSlots, formatWhen, matchesPeriod, relativeDay, unitAt, utcToZoned, weeklyOf } from "@ecosaude/core/crm";
 import { and, asc, desc, eq, gt, inArray, inSequence, ne, schema, sql, withTenant } from "@ecosaude/db";
 import type { Metadata } from "next";
 import { WaitlistBoard } from "@/components/crm/waitlist/WaitlistBoard";
@@ -9,6 +9,7 @@ import { absencesByProfessional, workScheduleOf } from "@/modules/crm/hours";
 import { now } from "@/lib/clock";
 import { ago } from "@/modules/crm/format";
 import { expireOffers } from "@/modules/crm/scheduling";
+import { listUnits, roomFilter, roomSlotBase } from "@/modules/crm/units";
 
 export const metadata: Metadata = { title: "Lista de espera" };
 export const dynamic = "force-dynamic";
@@ -103,7 +104,8 @@ export default async function WaitlistPage() {
     ]);
     // Férias e folgas por data: o profissional ausente não tem horários para oferecer
     const absences = await absencesByProfessional(tx, pros.map((p) => p.id));
-    return { entries, offers, pros, busy, openOffers, stats, declined, absences };
+    const units = (await listUnits(tx)).filter((u) => u.active);
+    return { entries, offers, pros, busy, openOffers, stats, declined, absences, units };
   });
 
   /* --------------------------------- Fila --------------------------------- */
@@ -130,12 +132,18 @@ export default async function WaitlistPage() {
     openOffer: openByEntry.get(e.id) ?? null,
     conversationId: e.conversationId,
     optedOut: !!e.contact.optedOutAt,
+    unitId: e.unitId,
+    unitName: data.units.length > 1 ? (data.units.find((u) => u.id === e.unitId)?.name ?? null) : null,
   }));
+  // Unidade de cada horário livre (pela semana do profissional): quem só aceita uma unidade não recebe horário de outra
+  const mainUnitId = data.units.find((u) => u.main)?.id ?? "";
 
   /* ------------------------------- Encaixes ------------------------------- */
   // Horários livres (sem consulta e sem oferta aberta) que combinam com alguém da fila
   const waiting = data.entries.filter((e) => e.status === "aguardando" && !e.contact.optedOutAt);
   const opportunities: Opportunity[] = [];
+  // Consultórios: só oferece horário que também tem sala livre na unidade (mesma regra da marcação)
+  const roomBase = waiting.length ? await withTenant(ctx.user.clinicId, (tx) => roomSlotBase(tx, current, new Date(current.getTime() + (LOOKAHEAD_DAYS + 1) * 86_400_000))) : null;
   for (const p of data.pros) {
     const interested = waiting.filter((e) => e.professionalId === null || e.professionalId === p.id);
     if (interested.length === 0) continue;
@@ -151,12 +159,15 @@ export default async function WaitlistPage() {
         days: LOOKAHEAD_DAYS,
         limit: SLOTS_PER_PRO,
         period,
+        accept: roomBase ? roomFilter(roomBase, p).accept : undefined,
       });
       for (const s of slots) {
         const key = s.startsAt.toISOString();
         if (seen.has(key)) continue;
         seen.add(key);
-        const matches = interested.filter((e) => matchesPeriod(s.startsAt, e.period));
+        const zs = utcToZoned(s.startsAt);
+        const slotUnit = unitAt(weeklyOf(p), zs.weekday, zs.minutes, zs.minutes + p.slotMinutes, mainUnitId);
+        const matches = interested.filter((e) => matchesPeriod(s.startsAt, e.period) && (!e.unitId || e.unitId === slotUnit));
         if (matches.length === 0) continue;
         const z = utcToZoned(s.startsAt);
         opportunities.push({
@@ -190,6 +201,7 @@ export default async function WaitlistPage() {
       candidates: o.candidates.map((c) => ({ name: c.contact.name, outcome: c.outcome })),
     })),
     professionals: data.pros.map((p) => ({ id: p.id, name: p.name, slotMinutes: p.slotMinutes, color: p.color })),
+    units: data.units.length > 1 ? data.units.map((u) => ({ id: u.id, name: u.name })) : [],
     stats: {
       waiting: entries.filter((e) => e.status === "aguardando").length,
       offered: entries.filter((e) => e.status === "oferecido").length,

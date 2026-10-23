@@ -78,7 +78,7 @@ export function WaitlistBoard({ data }: { data: WaitlistData }) {
     for (const m of o.matches) if (!g.people.some((p) => p.id === m.id)) g.people.push(m);
   }
 
-  const entryCard = (e: WaitEntry) => <EntryCard key={e.id} e={e} nowMs={nowMs} compact={compact} canEdit={data.canEdit} professionals={proOptions} />;
+  const entryCard = (e: WaitEntry) => <EntryCard key={e.id} e={e} nowMs={nowMs} compact={compact} canEdit={data.canEdit} professionals={proOptions} units={data.units} />;
 
   return (
     <>
@@ -92,7 +92,7 @@ export function WaitlistBoard({ data }: { data: WaitlistData }) {
               <button type="button" onClick={() => setOtherSlot(true)} className={buttonStyles("secondary")}>
                 <Send className="size-4" aria-hidden /> Oferecer um horário
               </button>
-              <AddToWaitlist professionals={proOptions} />
+              <AddToWaitlist professionals={proOptions} units={data.units} />
             </>
           ) : null
         }
@@ -366,7 +366,7 @@ export function WaitlistBoard({ data }: { data: WaitlistData }) {
 const outcomeLabel: Record<string, string> = { enviada: "aguardando resposta", aceitou: "aceitou", recusou: "recusou", atrasado: "respondeu depois" };
 
 function OutcomeIcon({ outcome }: { outcome: string }) {
-  if (outcome === "aceitou") return <CheckCircle2 className="size-4 shrink-0 text-pep" aria-hidden />;
+  if (outcome === "aceitou") return <CheckCircle2 className="size-4 shrink-0 text-ok" aria-hidden />;
   if (outcome === "recusou") return <XCircle className="size-4 shrink-0 text-alert" aria-hidden />;
   return <CircleDashed className="size-4 shrink-0 text-ink-soft" aria-hidden />;
 }
@@ -409,12 +409,14 @@ function EntryCard({
   compact,
   canEdit,
   professionals,
+  units,
 }: {
   e: WaitEntry;
   nowMs: number;
   compact: boolean;
   canEdit: boolean;
   professionals: { id: string; name: string; slotMinutes: number }[];
+  units: { id: string; name: string }[];
 }) {
   const long = e.waitingDays >= LONG_WAIT_DAYS;
   return (
@@ -433,6 +435,7 @@ function EntryCard({
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-ink-soft">
             <span>
               {e.professionalName ?? "Qualquer profissional"}, {WAITLIST_PERIOD_LABEL[e.period].toLowerCase()}
+              {e.unitName ? `, ${e.unitName}` : ""}
             </span>
             <span className={cn("inline-flex items-center gap-1", long && "font-bold text-erp-ink")}>
               <Hourglass className="size-3.5" aria-hidden />
@@ -446,7 +449,7 @@ function EntryCard({
             </p>
           ) : null}
           {e.nextAppointment ? (
-            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-pep-ink">
+            <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ok-ink">
               <CalendarCheck2 className="size-4 shrink-0" aria-hidden /> Já tem consulta {e.nextAppointment}. Se só queria antecipar, mantenha; senão, remova da lista.
             </p>
           ) : null}
@@ -460,7 +463,7 @@ function EntryCard({
               </Link>
             ) : null}
             <ScheduleButton contactId={e.contactId} contactName={e.contactName} variant="secondary" label="Agendar" />
-            <AddToWaitlist professionals={professionals} contact={{ id: e.contactId, name: e.contactName }} entry={{ professionalId: e.professionalId, period: e.period, notes: e.notes }} />
+            <AddToWaitlist professionals={professionals} contact={{ id: e.contactId, name: e.contactName }} entry={{ professionalId: e.professionalId, period: e.period, notes: e.notes, unitId: e.unitId }} units={units} />
             <ActionButton action={removeFromWaitlistAction} fields={{ id: e.id }} label="Remover" variant="ghost" pendingText="..." confirmText={`Tirar ${e.contactName} da lista de espera?`} />
           </div>
         ) : null}

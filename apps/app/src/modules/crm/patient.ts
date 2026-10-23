@@ -1,5 +1,5 @@
 import "server-only";
-import { APPOINTMENT_STATUS_LABEL, formatWhen, utcToZoned, type Channel, type NoShowRisk } from "@ecosaude/core/crm";
+import { APPOINTMENT_STATUS_LABEL, formatWhen, utcToZoned, type Channel, type NoShowRisk, isFromPhone, isHumanOutbound } from "@ecosaude/core/crm";
 import { and, asc, desc, eq, inArray, inSequence, isNull, schema, type Tx } from "@ecosaude/db";
 import type { TimelineItem } from "@/components/crm/patients/PatientTools";
 import { describeEvent } from "./format";
@@ -65,13 +65,14 @@ export async function loadPatient360(tx: Tx, id: string, now: Date, opts: { risk
   for (const m of messages) {
     timeline.push({
       id: `m-${m.id}`,
-      kind: m.direction === "in" ? "in" : m.direction === "out" ? (m.authorId ? "out" : "system") : m.direction === "note" ? "note" : "system",
+      // Saída humana (no Tropi ou pelo celular da clínica) é "out"; as automáticas, "system"
+      kind: m.direction === "in" ? "in" : m.direction === "out" ? (isHumanOutbound(m) ? "out" : "system") : m.direction === "note" ? "note" : "system",
       at: m.createdAt.toISOString(),
       when: fmt(m.createdAt),
       text: m.body,
       sub: m.direction === "out" && m.status === "falhou" ? "Falhou no envio" : undefined,
       channel: m.channel,
-      author: m.direction === "in" ? contact.name : (m.author?.name ?? null),
+      author: m.direction === "in" ? contact.name : (m.author?.name ?? (isFromPhone(m.meta) ? "Equipe, pelo celular" : null)),
       conversationId: m.conversationId,
     });
   }

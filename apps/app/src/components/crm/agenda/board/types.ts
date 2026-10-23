@@ -67,9 +67,19 @@ export interface AgendaData {
   nowMin: number;
   serverNowMs: number;
   canEdit: boolean;
+  /** Prontuário contratado e o perfil atende: mostra "Iniciar atendimento" na consulta */
+  pep?: boolean;
   features: { confirmations: boolean; waitlist: boolean; cancel: boolean };
   /** Consulta para abrir ao carregar (link da ficha do paciente) */
   openId?: string;
+  /** Unidades que a pessoa pode ver (só quando a clínica tem mais de uma) */
+  units: { id: string; name: string }[];
+  /** Unidade escolhida (null = todas as permitidas) */
+  unitId: string | null;
+  /** Pode escolher "todas as unidades" (sem restrição de unidade no acesso) */
+  allUnits: boolean;
+  /** Consultórios ativos (trocar o consultório da consulta) */
+  rooms: { id: string; unitId: string; name: string }[];
 }
 
 /** Preferências de exibição (salvas no navegador de cada pessoa) */

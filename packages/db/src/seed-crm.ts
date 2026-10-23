@@ -67,6 +67,11 @@ export async function seedCrmDemo(db: Db): Promise<void> {
       startedAt: new Date(now - 40 * DAY),
     });
   }
+  // Prontuário em teste: mostra a integração Agenda -> atendimento -> retorno
+  const pepPlan = await db.query.plans.findFirst({ where: and(eq(schema.plans.moduleId, "pep"), eq(schema.plans.name, "Completo")) });
+  if (pepPlan) {
+    await db.insert(schema.subscriptions).values({ clinicId, planId: pepPlan.id, moduleId: "pep", status: "teste", priceMonthlyCents: pepPlan.priceMonthlyCents, trialEndsAt: new Date(now + 14 * DAY) });
+  }
 
   /* --------------------------------- Equipe ---------------------------------- */
 
@@ -83,12 +88,63 @@ export async function seedCrmDemo(db: Db): Promise<void> {
   const pros = await db
     .insert(schema.professionals)
     .values([
-      { clinicId, name: "Dra. Beatriz Lemos", specialty: "Dermatologia", color: "crm", userId: beatrizUser.id, workDays: [1, 2, 3, 4, 5, 6] },
-      { clinicId, name: "Dr. Caio Prado", specialty: "Clínica geral", color: "pep", workDays: [1, 2, 3, 4, 5, 6] },
+      { clinicId, name: "Dra. Beatriz Lemos", specialty: "Dermatologia", color: "crm", userId: beatrizUser.id, workDays: [1, 2, 3, 4, 5, 6], council: "CRM", councilNumber: "12345", councilUf: "RS" },
+      { clinicId, name: "Dr. Caio Prado", specialty: "Clínica geral", color: "pep", workDays: [1, 2, 3, 4, 5, 6], council: "CRM", councilNumber: "23456", councilUf: "RS" },
       { clinicId, name: "Dra. Helena Duarte", specialty: "Pediatria", color: "bi", workDays: [1, 2, 3, 4, 5], slotMinutes: 40, workStart: "08:00", workEnd: "17:20" },
     ])
     .returning();
   const [beatriz, caio, helena] = pros as [typeof pros[number], typeof pros[number], typeof pros[number]];
+
+  /* ------------------------- Unidades e consultórios ------------------------- */
+  // A principal é criada sozinha (gatilho da migração 0032); aqui ganha endereço e uma segunda unidade
+  const [moinhos] = await db
+    .update(schema.clinicUnits)
+    .set({
+      name: "Unidade Moinhos",
+      address: "Rua Padre Chagas, 300, sala 501",
+      district: "Moinhos de Vento",
+      city: "Porto Alegre",
+      state: "RS",
+      zip: "90570080",
+      phone: "5133330000",
+      cnes: "1234567",
+      // Horário da clínica (a principal): seg a sex 8h às 18h e sábado de manhã. O Centro herda.
+      openingHours: { ...Object.fromEntries(["1", "2", "3", "4", "5"].map((k) => [k, { periods: [{ start: "08:00", end: "18:00" }] }])), "6": { periods: [{ start: "08:00", end: "12:00" }] } },
+    })
+    .where(and(eq(schema.clinicUnits.clinicId, clinicId), eq(schema.clinicUnits.main, true)))
+    .returning();
+  const [centro] = await db
+    .insert(schema.clinicUnits)
+    .values({ clinicId, name: "Unidade Centro", address: "Rua dos Andradas, 1200, conj. 304", district: "Centro Histórico", city: "Porto Alegre", state: "RS", zip: "90020008", phone: "5133331111", cnes: "7654321", sortOrder: 1 })
+    .returning();
+  const rooms = await db
+    .insert(schema.clinicRooms)
+    .values([
+      { clinicId, unitId: moinhos!.id, name: "Consultório 1", kind: "consultorio" as const, sortOrder: 1 },
+      { clinicId, unitId: moinhos!.id, name: "Consultório 2", kind: "consultorio" as const, sortOrder: 2 },
+      { clinicId, unitId: moinhos!.id, name: "Sala de procedimentos", kind: "procedimento" as const, sortOrder: 3 },
+      { clinicId, unitId: moinhos!.id, name: "Triagem", kind: "triagem" as const, sortOrder: 4 },
+      { clinicId, unitId: centro!.id, name: "Sala 1", kind: "consultorio" as const, sortOrder: 1 },
+      { clinicId, unitId: centro!.id, name: "Sala 2", kind: "consultorio" as const, sortOrder: 2 },
+    ])
+    .returning();
+  const room = (unitId: string, name: string) => rooms.find((r) => r.unitId === unitId && r.name === name)!.id;
+  const day = (periods: { start: string; end: string; unitId?: string; roomId?: string }[]) => ({ periods });
+  const twoShifts = (unitId: string | undefined, roomId: string, end = "18:00") => day([
+    { start: "08:00", end: "12:00", ...(unitId ? { unitId } : {}), roomId },
+    { start: "13:00", end, ...(unitId ? { unitId } : {}), roomId },
+  ]);
+  // Beatriz: seg a sex no Moinhos (Consultório 1), sábado de manhã no Centro (Sala 1)
+  const c1 = room(moinhos!.id, "Consultório 1");
+  const c2 = room(moinhos!.id, "Consultório 2");
+  const s1 = room(centro!.id, "Sala 1");
+  const s2 = room(centro!.id, "Sala 2");
+  const weeks: [string, Record<string, ReturnType<typeof day>>][] = [
+    [beatriz.id, { "1": twoShifts(undefined, c1), "2": twoShifts(undefined, c1), "3": twoShifts(undefined, c1), "4": twoShifts(undefined, c1), "5": twoShifts(undefined, c1), "6": day([{ start: "08:00", end: "12:00", unitId: centro!.id, roomId: s1 }]) }],
+    [caio.id, { "1": twoShifts(undefined, c2), "2": twoShifts(undefined, c2), "3": twoShifts(undefined, c2), "4": twoShifts(undefined, c2), "5": twoShifts(undefined, c2), "6": twoShifts(undefined, c2) }],
+    [helena.id, { "1": twoShifts(centro!.id, s2, "17:20"), "2": twoShifts(centro!.id, s2, "17:20"), "3": twoShifts(centro!.id, s2, "17:20"), "4": twoShifts(centro!.id, s2, "17:20"), "5": twoShifts(centro!.id, s2, "17:20") }],
+  ];
+  for (const [id, week] of weeks) await db.update(schema.professionals).set({ weeklySchedule: week }).where(eq(schema.professionals.id, id));
 
   /* -------------------------------- Contatos --------------------------------- */
 
@@ -390,6 +446,13 @@ export async function seedCrmDemo(db: Db): Promise<void> {
     await db.insert(schema.channelConnections).values({ clinicId: olhar.id, channel: "whatsapp", mode: "simulacao", displayName: "+55 51 3222-0000" });
   }
 
+  // Consultas de demonstração no local certo: o da semana de cada profissional
+  await db.execute(sql`
+    update appointments a set
+      unit_id = coalesce((p.weekly_schedule -> extract(dow from a.starts_at at time zone 'America/Sao_Paulo')::int::text -> 'periods' -> 0 ->> 'unitId')::uuid, ${moinhos!.id}::uuid),
+      room_id = (p.weekly_schedule -> extract(dow from a.starts_at at time zone 'America/Sao_Paulo')::int::text -> 'periods' -> 0 ->> 'roomId')::uuid
+    from professionals p
+    where p.id = a.professional_id and a.clinic_id = ${clinicId}`);
   console.log("CRM de demonstração: ok");
   console.log(`  Clínica Exemplo: gestor@ / recepcao@ / beatriz@clinicaexemplo.com.br, senha "${CRM_DEMO_PASSWORD}"`);
   console.log(`  Clínica Olhar:   gestor@olhar.exemplo.com.br, senha "${CRM_DEMO_PASSWORD}"`);

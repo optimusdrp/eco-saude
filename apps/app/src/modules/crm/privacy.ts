@@ -37,7 +37,7 @@ import { logEvent } from "./journey";
  *  - nps_responses e slot_offer_candidates: só números, ficam.
  *
  * Limite conhecido (fica na tela e no README): o histórico no aparelho do paciente
- * e nos servidores do WhatsApp/Meta não é apagado pelo EcoSaúde; cópias de segurança
+ * e nos servidores do WhatsApp/Meta não é apagado pelo Tropi; cópias de segurança
  * do banco expiram no prazo da retenção configurada no provedor.
  */
 
@@ -195,6 +195,8 @@ export async function anonymizeContact(tx: Tx, contactId: string): Promise<Recor
       .returning({ a: schema.duplicateReviews.contactA }),
   );
   await tx.delete(schema.contactDuplicateDismissals).where(or(eq(schema.contactDuplicateDismissals.contactA, contactId), eq(schema.contactDuplicateDismissals.contactB, contactId)));
+  // Avisos do sino que citam o paciente pelo nome (o registro de acessos do prontuário fica)
+  r.avisos = n(await tx.delete(schema.userNotices).where(eq(schema.userNotices.contactId, contactId)).returning({ id: schema.userNotices.id }));
 
   // 3. Trechos citados: apagados (categoria e notas da equipe ficam)
   r.trechos = n(await tx.update(schema.lossReasons).set({ quote: null }).where(eq(schema.lossReasons.contactId, contactId)).returning({ id: schema.lossReasons.id }));
@@ -230,6 +232,11 @@ export async function anonymizeContact(tx: Tx, contactId: string): Promise<Recor
   // 7. Linha do tempo: fica só tipo e data
   r.eventos = n(await tx.update(schema.crmEvents).set({ data: null }).where(eq(schema.crmEvents.contactId, contactId)).returning({ id: schema.crmEvents.id }));
 
+  // 7b. Prontuário: NÃO é apagado (CFM 1.821/2007, Lei 13.787/2018: guarda de 20 anos; LGPD
+  //     art. 16, I: obrigação legal). A identificação é copiada para o prontuário antes de a
+  //     ficha ser anonimizada, para a clínica continuar sabendo de quem é o registro.
+  r.prontuario_preservado = await snapshotPepIdentity(tx, contactId);
+
   // 8. A ficha
   await tx
     .update(schema.contacts)
@@ -238,6 +245,8 @@ export async function anonymizeContact(tx: Tx, contactId: string): Promise<Recor
       phone: null,
       email: null,
       birthDate: null,
+      sex: null,
+      cpf: null,
       insurance: null,
       referredBy: null,
       lostReason: null,
@@ -250,6 +259,28 @@ export async function anonymizeContact(tx: Tx, contactId: string): Promise<Recor
     })
     .where(eq(schema.contacts.id, contactId));
   return r;
+}
+
+/**
+ * Guarda a identificação no prontuário (se o paciente tiver prontuário). Devolve 1 se guardou.
+ * Fica numa função à parte para o Prontuário reaproveitar (ex.: exibir "Paciente: <nome do registro>").
+ */
+export async function snapshotPepIdentity(tx: Tx, contactId: string): Promise<number> {
+  const has = await tx.execute<{ n: number }>(sql`
+    select (exists (select 1 from pep_encounters where contact_id = ${contactId})
+         or exists (select 1 from pep_documents where contact_id = ${contactId})
+         or exists (select 1 from pep_patient_profiles where contact_id = ${contactId})
+         or exists (select 1 from pep_triages where contact_id = ${contactId}))::int as n`);
+  if (!has.rows[0]?.n) return 0;
+  const c = await tx.query.contacts.findFirst({ where: eq(schema.contacts.id, contactId) });
+  if (!c) return 0;
+  // Só o necessário para identificar o registro clínico (minimização): telefone e e-mail não ficam
+  const snapshot = { name: c.name, birthDate: c.birthDate, sex: c.sex, cpf: c.cpf, at: new Date().toISOString() };
+  await tx
+    .insert(schema.pepPatientProfiles)
+    .values({ contactId, identitySnapshot: snapshot })
+    .onConflictDoUpdate({ target: schema.pepPatientProfiles.contactId, set: { identitySnapshot: snapshot } });
+  return 1;
 }
 
 /** Lista dos pedidos para a tela (mais urgentes primeiro). */

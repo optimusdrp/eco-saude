@@ -12,9 +12,9 @@ export type ModuleStatus = "em-teste" | "em-desenvolvimento" | "planejado";
 
 export interface EcosystemModule {
   id: ModuleId;
-  /** Nome curto exibido nos chips e no mapa. */
+  /** Nome curto exibido nos chips e no mapa ("Atendimento"). */
   name: string;
-  /** Nome descritivo para quem não conhece a sigla. */
+  /** Nome completo com a marca ("Tropi Atendimento"). */
   fullName: string;
   /** Uma frase sobre o que o módulo resolve, na linguagem do usuário. */
   summary: string;

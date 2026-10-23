@@ -59,9 +59,15 @@ export function isUniqueViolation(error: unknown, constraint?: string): boolean 
   return code === "23505" && (!constraint || c === constraint);
 }
 
-/** 23P01 = horário em conflito (restrição de exclusão da agenda) */
+/** 23P01 = horário em conflito (restrição de exclusão da agenda: profissional OU consultório) */
 export function isScheduleConflict(error: unknown): boolean {
   return pgErrorCode(error).code === "23P01";
+}
+
+/** O conflito foi do CONSULTÓRIO (outro profissional já está na sala nesse horário) */
+export function isRoomConflict(error: unknown): boolean {
+  const { code, constraint } = pgErrorCode(error);
+  return code === "23P01" && constraint === "appointments_room_no_overlap";
 }
 
 /** Erro "esperado" (regra de negócio) com mensagem para mostrar na tela. */
@@ -75,7 +81,10 @@ export class UserError extends Error {
 /** Converte erros conhecidos em ActionState; erros desconhecidos sobem (aparecem no log). */
 export function toActionError(error: unknown): ActionState {
   if (error instanceof UserError) return { ok: false, message: error.message };
+  if (isRoomConflict(error)) return { ok: false, message: "O consultório já está ocupado nesse horário por outra consulta. Escolha outro consultório ou outro horário." };
   if (isScheduleConflict(error)) return { ok: false, message: "Esse horário acabou de ser ocupado. Escolha outro." };
+  // EC002: unidade/consultório que não combinam (migração 0032)
+  if (pgErrorCode(error).code === "EC002") return { ok: false, message: "O consultório escolhido não é da unidade da consulta. Escolha outro." };
   // EC001: trava do banco para fichas anonimizadas (migração 0024)
   if (pgErrorCode(error).code === "EC001")
     return { ok: false, message: "Os dados deste paciente foram apagados a pedido dele (LGPD). A ficha não pode mais ser alterada nem receber consultas, tarefas ou mensagens." };

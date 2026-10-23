@@ -74,7 +74,7 @@ function EnableFlow() {
           </code>
         </details>
         <p className="mt-2 text-xs text-ink-soft">
-          Se você já tinha cadastrado o EcoSaúde no aplicativo antes, apague o cadastro antigo: só este QR code vale.
+          Se você já tinha cadastrado o Tropi no aplicativo antes, apague o cadastro antigo: só este QR code vale.
         </p>
       </li>
       <li>
@@ -95,7 +95,7 @@ function DisableForm() {
   const [state, action] = useActionState(disableTwoFactorAction, {});
   return (
     <div className="space-y-3">
-      <p className="flex items-start gap-2 text-pep-ink">
+      <p className="flex items-start gap-2 text-ok-ink">
         <ShieldCheck className="mt-0.5 size-5 shrink-0" aria-hidden />
         Ativa. O login pede o código do aplicativo depois da senha.
       </p>

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 // Fontes hospedadas pelo próprio site (pacotes @fontsource): não dependem do
 // Google Fonts em tempo de execução e não enviam dados do visitante a terceiros.
 import "@fontsource-variable/bricolage-grotesque";
-import "@fontsource-variable/atkinson-hyperlegible-next";
+import "@fontsource-variable/instrument-sans";
 import "./globals.css";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { Footer } from "@/components/layout/Footer";
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 /** Viewport: cor da barra do navegador no celular e zoom liberado (acessibilidade). */
 export const viewport: Viewport = {
-  themeColor: "#f2f3f7",
+  themeColor: "#f7f7fa",
   width: "device-width",
   initialScale: 1,
 };

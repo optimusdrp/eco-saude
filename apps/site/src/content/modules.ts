@@ -1,3 +1,4 @@
+import { MODULE_FULL_NAME, MODULE_LABEL } from "@ecosaude/core";
 import type { EcosystemModule, ModuleConnection, ModuleId } from "@/types";
 
 /**
@@ -8,8 +9,8 @@ import type { EcosystemModule, ModuleConnection, ModuleId } from "@/types";
 export const modules: EcosystemModule[] = [
   {
     id: "crm",
-    name: "CRM",
-    fullName: "Relacionamento com pacientes",
+    name: MODULE_LABEL.crm,
+    fullName: MODULE_FULL_NAME.crm,
     summary:
       "Conversas de todos os canais em uma caixa só, funil de novos pacientes, confirmações e campanhas de retorno.",
     submodules: [
@@ -24,8 +25,8 @@ export const modules: EcosystemModule[] = [
   },
   {
     id: "erp",
-    name: "ERP",
-    fullName: "Gestão da clínica",
+    name: MODULE_LABEL.erp,
+    fullName: MODULE_FULL_NAME.erp,
     summary:
       "Financeiro, faturamento de convênios, estoque e repasse dos profissionais, sem planilha paralela.",
     submodules: [
@@ -39,8 +40,8 @@ export const modules: EcosystemModule[] = [
   },
   {
     id: "pep",
-    name: "Prontuário",
-    fullName: "Prontuário eletrônico",
+    name: MODULE_LABEL.pep,
+    fullName: MODULE_FULL_NAME.pep,
     summary:
       "Evolução clínica, prescrições e exames com histórico completo e registro de quem alterou o quê.",
     submodules: [
@@ -54,8 +55,8 @@ export const modules: EcosystemModule[] = [
   },
   {
     id: "bi",
-    name: "BI",
-    fullName: "Indicadores e análises",
+    name: MODULE_LABEL.bi,
+    fullName: MODULE_FULL_NAME.bi,
     summary:
       "Painéis prontos de ocupação, faltas, faturamento e origem dos pacientes, com perguntas em linguagem natural.",
     submodules: [
@@ -76,7 +77,7 @@ export const connections: ModuleConnection[] = [
   {
     between: ["crm", "pep"],
     description:
-      "A linha do tempo do paciente no CRM passa a mostrar o resumo do último atendimento.",
+      "A linha do tempo do paciente no Atendimento passa a mostrar o resumo do último atendimento.",
   },
   {
     between: ["crm", "erp"],

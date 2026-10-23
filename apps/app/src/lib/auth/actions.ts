@@ -22,7 +22,7 @@ import { createSession, destroyCurrentSession } from "./session";
  */
 const MAX_FAILURES = 5;
 const LOCK_MINUTES = 15;
-const TOTP_ISSUER = "EcoSaúde Clínica";
+const TOTP_ISSUER = "Tropi";
 /** Hash de uma senha qualquer: comparado quando o e-mail não existe, para o tempo de resposta ser igual. */
 const DUMMY_HASH = "$2b$12$j7EDoZ4zxfymqwg4ZzBA.u69pwuOqtveJ74t7FDZY/iw4HC8jQ3mq";
 
@@ -30,7 +30,7 @@ async function nextRoute(): Promise<string> {
   const user = await getCurrentUser();
   if (!user) return "/login";
   const step = pendingStep(user);
-  return step ? routeForStep(step) : "/hoje";
+  return step ? routeForStep(step) : "/";
 }
 
 async function registerFailure(userId: string) {

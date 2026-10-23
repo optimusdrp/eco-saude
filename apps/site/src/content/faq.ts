@@ -34,6 +34,6 @@ export const faq: FaqItem[] = [
   {
     question: "Quando os módulos estarão disponíveis?",
     answer:
-      "O CRM está em fase de testes. ERP, Prontuário e BI estão em desenvolvimento, nessa ordem. Peça uma demonstração para acompanhar as liberações.",
+      "O Tropi Atendimento está em fase de testes. Gestão, Prontuário e Indicadores estão em desenvolvimento, nessa ordem. Peça uma demonstração para acompanhar as liberações.",
   },
 ];

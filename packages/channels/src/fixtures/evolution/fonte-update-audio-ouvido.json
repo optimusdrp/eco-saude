@@ -1,0 +1,18 @@
+{
+  "event": "messages.update",
+  "instance": "tropi-piloto",
+  "data": {
+    "messageId": "cmh2k7x9a0001qz8f3b2c1d4e",
+    "keyId": "3EB0A1B2C3D4E5F600F2",
+    "remoteJid": "5551990000001@s.whatsapp.net",
+    "fromMe": true,
+    "participant": null,
+    "status": "PLAYED",
+    "instanceId": "7f0c2b9e-0000-4000-8000-000000000001"
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "status": "lida"
+  }
+}

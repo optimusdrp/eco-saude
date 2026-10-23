@@ -160,7 +160,7 @@ export async function planSummary(tx: Tx, scope: CrmScope, conversationId: strin
   let blocked: string | null = null;
   if (!cfg?.enabled) blocked = "a IA está desligada em Ajustes > Inteligência artificial";
   else if (!aiConfigured()) blocked = "IA não configurada no servidor";
-  else if (conv.urgent) blocked = "conversa com sinal de urgência: o resumo fica no CRM, sem IA";
+  else if (conv.urgent) blocked = "conversa com sinal de urgência: o resumo fica no Tropi, sem IA";
   else if (scope.actorId) {
     const [recent] = await tx
       .select({ n: sql<number>`count(*)::int` })

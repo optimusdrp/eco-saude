@@ -31,7 +31,7 @@ export async function planRuleText(tx: Tx, actorId: string | null): Promise<{ ct
   if (!cfg?.enabled) throw new UserError("“Criar regra escrevendo em português” está desligada em Ajustes > Inteligência artificial.");
   const team = await tx.select({ id: schema.clinicUsers.id, name: schema.clinicUsers.name }).from(schema.clinicUsers).where(eq(schema.clinicUsers.active, true)).orderBy(asc(schema.clinicUsers.name));
   const tags = await tx.execute<{ tag: string }>(sql`select distinct unnest(tags) as tag from contacts order by 1 limit 60`);
-  // Limite por pessoa (custo e abuso): depois disso, só as regras do CRM
+  // Limite por pessoa (custo e abuso): depois disso, só as regras do Tropi
   const [recent] = actorId
     ? await tx
         .select({ n: sql<number>`count(*)::int` })

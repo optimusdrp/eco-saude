@@ -30,6 +30,9 @@ import { bestChannel, ensureConversation, queueOutbound, templateVars } from "./
 import { renderTemplate, templateText } from "./templates";
 import type { CrmScope } from "./scope";
 import { activeModel } from "./ml/models";
+import { freeRoomsAt, mainUnit, placeFor, placeVars } from "./units";
+import { loadClosures } from "./opening";
+import { BOOKABLE_ROOM_KINDS, closureOn, unitAt } from "@ecosaude/core/crm";
 
 /**
  * Regras da agenda: marcar, mudar status, pedir confirmação, oferecer
@@ -70,6 +73,11 @@ export async function scheduleWarnings(
     .limit(1);
   const day = dayMinutes(weeklyOf(p), z.weekday, p.slotMinutes);
   const fit = fitsDay(day, start, end);
+  // Feriado ou fechamento da unidade onde a consulta aconteceria (ou da clínica inteira)
+  const main = await mainUnit(tx);
+  const unitId = unitAt(weeklyOf(p), z.weekday, start, end, main.id);
+  const closure = closureOn(await loadClosures(tx, z.date, z.date), unitId, z.date);
+  if (closure) out.push(`${closure.unitId ? "a unidade" : "a clínica"} está fechada neste dia (${closure.reason})`);
   if (absent) out.push(`o profissional está ausente neste dia${absent.reason ? ` (${absent.reason})` : ""}`);
   else if (!fit.ok && fit.reason === "dia") out.push("o profissional não atende neste dia da semana");
   else if (!fit.ok && fit.reason === "fora") out.push(`fora do expediente (${describePeriods(day!)})`);
@@ -152,16 +160,23 @@ export async function createAppointment(
   if (input.startsAt.getTime() < Date.now() - 5 * MIN) throw new UserError("Esse horário já passou.");
 
   const endsAt = new Date(input.startsAt.getTime() + (input.durationMinutes ?? pro.slotMinutes) * MIN);
+  // Unidade e consultório: do período da semana do profissional (ou um consultório livre)
+  const place = await placeFor(tx, pro, input.startsAt, endsAt);
   if (!input.force) {
     const warnings = await scheduleWarnings(tx, { pro, contactId: contact.id, startsAt: input.startsAt, endsAt });
+    // Unidade com consultórios e todos ocupados nesse horário: a consulta ficaria sem sala
+    if (!place.roomId && (await freeRoomsAt(tx, place.unitId, input.startsAt, endsAt)).some((r) => BOOKABLE_ROOM_KINDS.includes(r.kind)))
+      warnings.push("todos os consultórios da unidade estão ocupados nesse horário (a consulta fica sem consultório definido)");
     if (warnings.length) throw new ScheduleWarning(`Atenção: ${warnings.join("; ")}. Confirme para marcar mesmo assim.`);
   }
-  // Se o horário estiver ocupado, o banco recusa (erro 23P01) e a tela avisa
+  // Se o horário (do profissional ou do consultório) estiver ocupado, o banco recusa (23P01)
   const [appt] = await tx
     .insert(schema.appointments)
     .values({
       contactId: contact.id,
       professionalId: pro.id,
+      unitId: place.unitId,
+      roomId: place.roomId,
       startsAt: input.startsAt,
       endsAt,
       service: input.service ?? null,
@@ -189,7 +204,7 @@ export async function createAppointment(
   if (input.notifyConversationId) {
     const conv = await tx.query.conversations.findFirst({ where: eq(schema.conversations.id, input.notifyConversationId) });
     if (conv && conv.contactId === contact.id) {
-      const body = await renderTemplate(tx, "agendamento", templateVars(contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }));
+      const body = await renderTemplate(tx, "agendamento", templateVars(contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }, await placeVars(tx, place.unitId, place.roomId)));
       if (body) await queueOutbound(tx, { conversation: conv, body, authorId: scope.actorId, templateKey: "agendamento", meta: { appointmentId: appt!.id } });
     }
   }
@@ -276,7 +291,7 @@ export async function changeAppointmentStatus(
   }
 
   const auto = await automationSettings(tx);
-  const vars = templateVars(appt.contact, scope.clinicName, { startsAt: appt.startsAt, professionalName: appt.professional.name });
+  const vars = templateVars(appt.contact, scope.clinicName, { startsAt: appt.startsAt, professionalName: appt.professional.name }, await placeVars(tx, appt.unitId, appt.roomId));
 
   // Faltou: sai de "Agendado" (se não tiver outra marcada) e vira tarefa de remarcar (automação "Falta vira tarefa")
   if (input.status === "faltou") {
@@ -365,6 +380,8 @@ export async function rescheduleAppointment(
     .update(schema.appointments)
     .set({
       professionalId: pro.id,
+      // Novo horário pode ser em outra unidade (outro dia da semana) ou outro consultório
+      ...(await placeFor(tx, pro, input.startsAt, endsAt, { excludeAppointmentId: appt.id })),
       startsAt: input.startsAt,
       endsAt,
       status: "agendado",
@@ -402,7 +419,9 @@ export async function rescheduleAppointment(
       notifySkipped = appt.contact.optedOutAt ? "o paciente pediu para não receber mensagens" : "o paciente não tem canal de contato";
     } else {
       const conv = await ensureConversation(tx, appt.contactId, channel);
-      const body = fillTemplate((await templateText(tx, "remarcacao")) ?? "", templateVars(appt.contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }));
+      // Local do NOVO horário (pode ter mudado de unidade ou de consultório)
+      const [moved] = await tx.select({ unitId: schema.appointments.unitId, roomId: schema.appointments.roomId }).from(schema.appointments).where(eq(schema.appointments.id, appt.id));
+      const body = fillTemplate((await templateText(tx, "remarcacao")) ?? "", templateVars(appt.contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }, await placeVars(tx, moved?.unitId, moved?.roomId)));
       await queueOutbound(tx, { conversation: conv, body, authorId: scope.actorId, templateKey: "remarcacao", meta: { kind: "reschedule", appointmentId: appt.id } });
       notified = true;
     }
@@ -418,7 +437,11 @@ export async function rescheduleAppointment(
 /* --------------------------- Corrigir detalhes ----------------------------- */
 
 /** Corrige serviço, observações e duração de uma consulta já marcada. */
-export async function updateAppointmentDetails(tx: Tx, scope: CrmScope, input: { id: string; version: number; service?: string; notes?: string; durationMinutes?: number }) {
+export async function updateAppointmentDetails(
+  tx: Tx,
+  scope: CrmScope,
+  input: { id: string; version: number; service?: string; notes?: string; durationMinutes?: number; /** "" = sem consultório; undefined = não muda */ roomId?: string },
+) {
   const appt = await tx.query.appointments.findFirst({ where: eq(schema.appointments.id, input.id) });
   if (!appt) throw new UserError("Consulta não encontrada.");
   const currentLength = Math.round((appt.endsAt.getTime() - appt.startsAt.getTime()) / MIN);
@@ -427,9 +450,21 @@ export async function updateAppointmentDetails(tx: Tx, scope: CrmScope, input: {
     throw new UserError("A duração só pode mudar em consulta agendada ou confirmada.");
   }
   const endsAt = lengthChanged ? new Date(appt.startsAt.getTime() + input.durationMinutes! * MIN) : appt.endsAt;
+  if (input.roomId && input.roomId !== appt.roomId) {
+    const rooms = await freeRoomsAt(tx, appt.unitId ?? (await mainUnit(tx)).id, appt.startsAt, endsAt, appt.id);
+    const room = rooms.find((r) => r.id === input.roomId);
+    if (!room) throw new UserError("Consultório não encontrado nesta unidade.");
+    if (!room.free) throw new UserError(`${room.name} está ocupado nesse horário. Escolha outro.`);
+  }
   const updated = await tx
     .update(schema.appointments)
-    .set({ service: input.service ?? null, notes: input.notes ?? null, endsAt, version: sql`${schema.appointments.version} + 1` })
+    .set({
+      service: input.service ?? null,
+      notes: input.notes ?? null,
+      endsAt,
+      ...(input.roomId !== undefined ? { roomId: input.roomId || null } : {}),
+      version: sql`${schema.appointments.version} + 1`,
+    })
     .where(and(eq(schema.appointments.id, appt.id), eq(schema.appointments.version, input.version)))
     .returning({ id: schema.appointments.id });
   if (updated.length === 0) throw new UserError("Esta consulta foi alterada por outra pessoa. Atualize a página e tente de novo.");
@@ -475,7 +510,7 @@ export async function requestConfirmations(tx: Tx, scope: CrmScope, appointmentI
       continue;
     }
     const conv = await ensureConversation(tx, a.contactId, channel);
-    const body = fillTemplate(template, templateVars(a.contact, scope.clinicName, { startsAt: a.startsAt, professionalName: a.professional.name }));
+    const body = fillTemplate(template, templateVars(a.contact, scope.clinicName, { startsAt: a.startsAt, professionalName: a.professional.name }, await placeVars(tx, a.unitId, a.roomId)));
     await queueOutbound(tx, { conversation: conv, body, authorId: null, templateKey: "confirmacao", meta: { kind: "confirmation", appointmentId: a.id } });
     await tx.update(schema.appointments).set({ confirmationRequestedAt: new Date() }).where(eq(schema.appointments.id, a.id));
     await logEvent(tx, { contactId: a.contactId, actorId: scope.actorId, type: "confirmation_requested", data: { appointmentId: a.id } });
@@ -543,6 +578,14 @@ export async function waitlistCandidates(tx: Tx, slot: { professionalId: string;
       orderBy: asc(schema.waitlistEntries.createdAt),
     })
   ).filter((e) => matchesPeriod(slot.startsAt, e.period) && !e.contact.optedOutAt);
+  // Paciente que só aceita uma unidade: o horário precisa ser lá
+  if (entries.some((e) => e.unitId)) {
+    const pro = await tx.query.professionals.findFirst({ where: eq(schema.professionals.id, slot.professionalId) });
+    if (pro) {
+      const { unitId } = await placeFor(tx, pro, slot.startsAt, new Date(slot.startsAt.getTime() + pro.slotMinutes * MIN));
+      for (let i = entries.length - 1; i >= 0; i--) if (entries[i]!.unitId && entries[i]!.unitId !== unitId) entries.splice(i, 1);
+    }
+  }
 
   const cfg = (await automationSettings(tx)).ia_encaixe;
   if (!cfg?.enabled || entries.length === 0) return entries.map((e) => ({ ...e, fit: null as (CandidateScore & { facts: CandidateFacts }) | null }));
@@ -646,12 +689,14 @@ export async function offerSlot(tx: Tx, scope: CrmScope, input: { professionalId
   const facts = await candidateFacts(tx, entries, { professionalId: pro.id, startsAt: input.startsAt });
   const template = (await templateText(tx, "oferta")) ?? "";
   const offered: string[] = [];
+  // Onde será o horário oferecido (o paciente precisa saber o endereço antes de aceitar)
+  const offerPlace = await placeVars(tx, (await placeFor(tx, pro, input.startsAt, new Date(input.startsAt.getTime() + pro.slotMinutes * MIN))).unitId);
 
   for (const entry of entries) {
     const channel = await bestChannel(tx, entry.contactId);
     if (!channel) continue;
     const conv = await ensureConversation(tx, entry.contactId, channel);
-    const body = fillTemplate(template, templateVars(entry.contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }));
+    const body = fillTemplate(template, templateVars(entry.contact, scope.clinicName, { startsAt: input.startsAt, professionalName: pro.name }, offerPlace));
     await queueOutbound(tx, { conversation: conv, body, authorId: null, templateKey: "oferta", meta: { kind: "slot_offer", offerId: offer!.id } });
     const f = facts.get(entry.id);
     await tx.insert(schema.slotOfferCandidates).values({

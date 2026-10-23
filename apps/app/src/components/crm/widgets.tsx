@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Pequenos componentes interativos usados em várias telas do CRM.
+ * Pequenos componentes interativos usados em várias telas do Tropi.
  * Ficam no navegador; as páginas (Server Components) só os posicionam.
  */
 import { CalendarPlus } from "lucide-react";
@@ -110,7 +110,7 @@ export function ActionButton({
         {label}
       </SubmitButton>
       {state.message ? (
-        <p role={state.ok ? "status" : "alert"} className={cn("max-w-xs text-xs font-semibold", state.ok ? "text-pep-ink" : "text-alert")}>
+        <p role={state.ok ? "status" : "alert"} className={cn("max-w-xs text-xs font-semibold", state.ok ? "text-ok-ink" : "text-alert")}>
           {state.message}
         </p>
       ) : null}

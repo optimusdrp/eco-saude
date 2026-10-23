@@ -20,7 +20,7 @@ import { hhmm, STATUS_LABEL_SHORT, type TodayAppointment, type TodayProfessional
 
 const tone: Record<string, string> = {
   agendado: "bg-paper ring-1 ring-ink/15",
-  confirmado: "bg-pep-tint ring-1 ring-pep/40",
+  confirmado: "bg-ok-tint ring-1 ring-ok/40",
   compareceu: "bg-bi-tint ring-1 ring-bi/30",
   faltou: "bg-alert-tint ring-1 ring-alert/40",
   cancelado: "bg-fog ring-1 ring-line",
@@ -108,7 +108,7 @@ export function DayRuler({
                   <span className="truncate">{p.name}</span>
                 </span>
                 <span className="truncate text-xs text-ink-soft">
-                  {p.absentReason ? `ausente hoje: ${p.absentReason}` : p.start === null ? "não atende hoje" : `${own.length} consulta(s), ${pct}% ocupado`}
+                  {p.absentReason ? (p.absentReason.startsWith("fechado") ? `hoje: ${p.absentReason}` : `ausente hoje: ${p.absentReason}`) : p.start === null ? "não atende hoje" : `${own.length} consulta(s), ${pct}% ocupado`}
                 </span>
               </div>
 

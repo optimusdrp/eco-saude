@@ -4,7 +4,7 @@ import { withTenant, type Tx } from "@ecosaude/db";
 import type { CrmContext } from "@/lib/auth/dal";
 
 /**
- * Contexto das regras do CRM: de qual clínica, quem está agindo e quais
+ * Contexto das regras do Tropi: de qual clínica, quem está agindo e quais
  * funcionalidades o plano libera. As regras recebem isto em vez de ler a sessão,
  * então funcionam igual para uma tela, um webhook ou uma rotina agendada.
  */

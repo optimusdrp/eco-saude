@@ -1,39 +1,63 @@
 /*
- * Tokens de design compartilhados (Tailwind v4).
- * Importado por apps/site e apps/backoffice: mude aqui e os dois acompanham.
+ * Tokens de design da marca TROPI (Tailwind v4).
+ * Importado pelo site, backoffice e ambiente da clínica: mude aqui e os três acompanham.
  *
- * PALETA "Flora brasileira": cada módulo tem a cor de uma planta nativa.
- *   Jacarandá (CRM e marca) · Ipê-amarelo (ERP) · Hortelã (Prontuário) · Anil (BI)
+ * PALETA (guia de marca Tropi, adaptado: a cor principal é índigo, não verde)
+ *   Índigo profundo  #2B2A4C  barra lateral, fundos escuros, texto da marca  (night)
+ *   Índigo vivo      #4B46B8  links, seleção, botões da interface            (crm = marca)
+ *   Névoa            #ECEBF7  superfícies suaves, seleção                     (crm-tint)
+ *   Sol              #FF8A3D  o sol do símbolo e a AÇÃO PRINCIPAL da tela      (sun)
+ *                             texto sobre o Sol é sempre grafite (nunca branco: contraste 2,4:1)
+ *   Grafite          #1D1C33  texto principal                                 (ink)
+ *   Pedra            #5B5A74  texto de apoio                                  (ink-soft)
+ *   Linha            #DFDEEA  bordas e divisores                              (line)
+ *   Papel            #F7F7FA  fundo da página                                 (fog)
+ *
+ * MÓDULOS (cada um com a sua cor; nenhuma decora a marca no lugar do índigo)
+ *   Tropi Atendimento (crm) índigo · Tropi Gestão (erp) âmbar
+ *   Tropi Prontuário (pep) azul-céu · Tropi Indicadores (bi) orquídea
+ *
+ * ESTADOS: "ok" (deu certo) e "alert" (erro, urgência). Verde só aparece como
+ * sinal de "deu certo", nunca como cor da marca.
  */
 @theme {
   /* Base */
-  --color-fog: #f2f3f7;
+  --color-fog: #f7f7fa;
   --color-paper: #ffffff;
-  --color-ink: #18203a;
-  --color-ink-soft: #4f5873;
-  --color-line: #dce0ea;
-  --color-night: #1f1842;
-  --color-night-soft: #2c2458;
+  --color-ink: #1d1c33;
+  --color-ink-soft: #5b5a74;
+  --color-line: #dfdeea;
+  --color-night: #2b2a4c;
+  --color-night-soft: #3b3a63;
+
+  /* Ação principal (uma por tela): Sol com texto grafite */
+  --color-sun: #ff8a3d;
+  --color-sun-strong: #f27420;
+  --color-sun-tint: #ffeee2;
 
   /* Módulos */
-  --color-crm: #6d4ae0;
-  --color-crm-tint: #ece7fc;
-  --color-erp: #f0ae2e;
-  --color-erp-ink: #8a5a00;
-  --color-erp-tint: #fdf1d8;
-  --color-pep: #13a178;
-  --color-pep-ink: #0b7356;
-  --color-pep-tint: #dcf3ea;
-  --color-bi: #2f5bea;
-  --color-bi-tint: #e1e8fd;
+  --color-crm: #4b46b8;
+  --color-crm-tint: #ecebf7;
+  --color-crm-strong: #3a3699;
+  --color-erp: #e0a43a;
+  --color-erp-ink: #7a5200;
+  --color-erp-tint: #fbf0da;
+  --color-pep: #2a72bd;
+  --color-pep-ink: #1b5a9c;
+  --color-pep-tint: #e3eefa;
+  --color-bi: #9b3f8f;
+  --color-bi-tint: #f6e7f3;
 
   /* Estados */
-  --color-alert: #d9364f;
+  --color-ok: #2a7f50;
+  --color-ok-ink: #1d6a40;
+  --color-ok-tint: #e3f3ea;
+  --color-alert: #c0283e;
   --color-alert-tint: #fbe3e7;
 
-  /* Tipografia */
+  /* Tipografia (guia Tropi): títulos em Bricolage Grotesque, interface em Instrument Sans */
   --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
 
   /* Breakpoint extra para telas muito pequenas (320px) */
   --breakpoint-xs: 25rem;

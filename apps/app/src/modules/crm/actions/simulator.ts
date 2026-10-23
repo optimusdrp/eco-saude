@@ -38,7 +38,7 @@ export async function simulateInboundAction(_prev: ActionState, form: FormData):
   const { channel, name, text } = parsed.data;
 
   // Arquivo OPCIONAL: o simulador o guarda como se estivesse "no provedor". Daí para frente
-  // é o caminho real: o webhook traz só a referência, o CRM baixa depois e confere o tipo
+  // é o caminho real: o webhook traz só a referência, o Tropi baixa depois e confere o tipo
   // pelo conteúdo (um .exe renomeado para .pdf é recusado aqui também).
   const upload = form.get("file");
   const file = upload instanceof File && upload.size > 0 ? upload : null;

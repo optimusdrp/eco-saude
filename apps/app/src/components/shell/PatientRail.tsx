@@ -44,7 +44,7 @@ interface Summary {
   onWaitlist: boolean;
 }
 
-const riskClass = { baixo: "bg-pep-tint text-pep-ink", medio: "bg-erp-tint text-erp-ink", alto: "bg-alert-tint text-alert" };
+const riskClass = { baixo: "bg-ok-tint text-ok-ink", medio: "bg-erp-tint text-erp-ink", alto: "bg-alert-tint text-alert" };
 
 export function PatientRail() {
   const rail = useRail();
@@ -125,7 +125,7 @@ export function PatientRail() {
               <button
                 type="button"
                 onClick={() => emit("eco:open-schedule", { contactId: loaded.id, contactName: loaded.name, conversationId: loaded.conversations[0]?.id })}
-                className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-crm text-xs font-semibold text-white hover:bg-[#5a37cf]"
+                className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-crm text-xs font-semibold text-white hover:bg-crm-strong"
               >
                 <CalendarPlus className="size-4" aria-hidden /> Agendar
               </button>
@@ -191,7 +191,7 @@ export function PatientRail() {
                   </div>
                 ))}
               </dl>
-              <p className={cn("mt-2 rounded-lg px-2 py-1 text-xs font-semibold", loaded.optedOut ? "bg-alert-tint text-alert" : loaded.consent ? "bg-pep-tint text-pep-ink" : "bg-fog text-ink-soft")}>
+              <p className={cn("mt-2 rounded-lg px-2 py-1 text-xs font-semibold", loaded.optedOut ? "bg-alert-tint text-alert" : loaded.consent ? "bg-ok-tint text-ok-ink" : "bg-fog text-ink-soft")}>
                 {loaded.optedOut ? "Pediu para não receber mensagens" : loaded.consent ? "Autorizou mensagens de relacionamento" : "Sem consentimento para campanhas"}
               </p>
               {loaded.tags.length ? (

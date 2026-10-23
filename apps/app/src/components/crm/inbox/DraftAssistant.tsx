@@ -145,7 +145,7 @@ export function DraftCard({
           type="button"
           onClick={() => onUse(draft)}
           disabled={!draft.windowOpen}
-          className="inline-flex min-h-10 items-center rounded-xl bg-crm px-3 text-sm font-semibold text-white hover:bg-[#5a37cf] disabled:opacity-50 sm:min-h-9"
+          className="inline-flex min-h-10 items-center rounded-xl bg-crm px-3 text-sm font-semibold text-white hover:bg-crm-strong disabled:opacity-50 sm:min-h-9"
         >
           {hasText ? "Substituir o texto do campo" : "Usar no campo"}
         </button>

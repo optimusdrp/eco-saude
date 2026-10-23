@@ -8,6 +8,10 @@ export interface FreeSlot {
   date: string;
   time: string;
   label: string;
+  /** Unidade do horário (só quando a clínica tem mais de uma) */
+  unit?: string | null;
+  /** Consultório sugerido (o mesmo que a marcação vai usar; null = unidade sem controle de salas) */
+  room?: string | null;
 }
 
 /**
@@ -36,6 +40,8 @@ export interface ScheduleSuggestion {
 export interface AppEvents {
   "eco:open-patient": string;
   "eco:open-commands": undefined;
+  /** Pede ao sino de avisos que consulte agora (ex.: depois de uma ação que gera aviso) */
+  "eco:notices-refresh": undefined;
   "eco:open-simulator": undefined;
   "eco:open-schedule": { contactId?: string; contactName?: string; conversationId?: string; professionalId?: string; service?: string; date?: string; time?: string; suggestion?: ScheduleSuggestion };
   "eco:fill-composer": { body: string; templateId?: string };

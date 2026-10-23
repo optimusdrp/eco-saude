@@ -17,7 +17,7 @@ export function LoginForm() {
       <FormMessage state={state} />
       <Field label="E-mail" name="email" type="email" autoComplete="username" required defaultValue={state.values?.email} error={state.errors?.email} />
       <Field label="Senha" name="password" type="password" autoComplete="current-password" required error={state.errors?.password} />
-      <SubmitButton pendingText="Entrando..." className="w-full">
+      <SubmitButton variant="sun" pendingText="Entrando..." className="w-full">
         Entrar
       </SubmitButton>
     </form>
@@ -48,7 +48,7 @@ export function VerifyCodeForm() {
     <form action={action} className="space-y-4" noValidate>
       <FormMessage state={state} />
       <CodeField error={state.errors?.code} />
-      <SubmitButton pendingText="Conferindo..." className="w-full">
+      <SubmitButton variant="sun" pendingText="Conferindo..." className="w-full">
         Confirmar
       </SubmitButton>
     </form>
@@ -64,7 +64,7 @@ export function ChangePasswordForm({ from }: { from?: "conta" }) {
       <Field label={from ? "Senha atual" : "Senha temporária"} name="current" type="password" autoComplete="current-password" error={state.errors?.current} />
       <Field label="Nova senha" name="next" type="password" autoComplete="new-password" hint="Mínimo de 12 caracteres, com maiúscula, minúscula e número." error={state.errors?.next} />
       <Field label="Repita a nova senha" name="confirm" type="password" autoComplete="new-password" error={state.errors?.confirm} />
-      <SubmitButton className="w-full sm:w-auto">Salvar nova senha</SubmitButton>
+      <SubmitButton variant="sun" className="w-full sm:w-auto">Salvar nova senha</SubmitButton>
     </form>
   );
 }
@@ -79,7 +79,7 @@ export function ForgotPasswordForm() {
   if (state.ok && state !== dismissed) {
     return (
       <div className="space-y-4">
-        <p role="status" className="rounded-xl bg-pep-tint px-3 py-3 text-sm font-semibold text-pep-ink">
+        <p role="status" className="rounded-xl bg-ok-tint px-3 py-3 text-sm font-semibold text-ok-ink">
           {state.message}
         </p>
         <p className="text-sm text-ink-soft">
@@ -96,7 +96,7 @@ export function ForgotPasswordForm() {
     <form action={action} className="space-y-4" noValidate>
       {state.ok ? null : <FormMessage state={state} />}
       <Field label="E-mail" name="email" type="email" autoComplete="username" required autoFocus defaultValue={state.values?.email} error={state.errors?.email} />
-      <SubmitButton pendingText="Enviando..." className="w-full">
+      <SubmitButton variant="sun" pendingText="Enviando..." className="w-full">
         Enviar link
       </SubmitButton>
     </form>
@@ -201,7 +201,7 @@ export function ResetPasswordForm() {
         <FormMessage state={state} />
         <Field label="Nova senha" name="next" type="password" autoComplete="new-password" autoFocus hint="Mínimo de 12 caracteres, com maiúscula, minúscula e número." error={state.errors?.next} />
         <Field label="Repita a nova senha" name="confirm" type="password" autoComplete="new-password" error={state.errors?.confirm} />
-        <SubmitButton pendingText="Salvando..." className="w-full">
+        <SubmitButton variant="sun" pendingText="Salvando..." className="w-full">
           Salvar nova senha
         </SubmitButton>
       </form>

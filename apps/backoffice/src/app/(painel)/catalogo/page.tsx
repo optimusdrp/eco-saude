@@ -40,7 +40,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader title="Catálogo" description="Planos de cada módulo e as funcionalidades que eles incluem." />
       {saved ? (
-        <p role="status" className="mb-5 rounded-xl bg-pep-tint px-4 py-3 font-semibold text-pep-ink">
+        <p role="status" className="mb-5 rounded-xl bg-ok-tint px-4 py-3 font-semibold text-ok-ink">
           Plano salvo.
         </p>
       ) : null}
@@ -99,7 +99,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Prom
                         return (
                           <td key={plan.id} className="px-2 py-2">
                             {included ? (
-                              <span className="font-semibold text-pep-ink">Incluída</span>
+                              <span className="font-semibold text-ok-ink">Incluída</span>
                             ) : (
                               <span className="text-ink-soft">—</span>
                             )}

@@ -9,6 +9,7 @@ import { emit } from "@/lib/events";
 import { useNow } from "@/lib/hooks";
 import { ActionButton } from "@/components/crm/widgets";
 import { changeAppointmentStatusAction, finishAppointmentAction, requestConfirmationsAction } from "@/modules/crm/actions/agenda";
+import { StartEncounterButton } from "@/components/pep/widgets";
 import { OfferPanel } from "./OfferPanel";
 import { DetailsForm } from "./DetailsForm";
 import { RescheduleForm } from "./RescheduleForm";
@@ -37,6 +38,16 @@ export interface AppointmentView {
   realMinutes?: number | null;
   risk: (NoShowRisk & { source?: "modelo" | "regras" }) | null;
   future: boolean;
+  /** Onde: unidade (só se a clínica tem mais de uma) e consultório */
+  unitId?: string | null;
+  unitName?: string | null;
+  roomId?: string | null;
+  roomName?: string | null;
+}
+
+/** "Unidade Centro, Consultório 2" (o que existir) */
+export function placeLabel(a: Pick<AppointmentView, "unitName" | "roomName">): string {
+  return [a.unitName, a.roomName].filter(Boolean).join(", ");
 }
 
 /** Horário liberado (cancelamento ou remarcação), pronto para a lista de espera. */
@@ -54,6 +65,8 @@ export function AppointmentDialog({
   appt,
   onClose,
   canEdit,
+  pep = false,
+  rooms = [],
   features,
   professionals,
   today,
@@ -61,6 +74,10 @@ export function AppointmentDialog({
   appt: AppointmentView | null;
   onClose: () => void;
   canEdit: boolean;
+  /** Prontuário: botão "Iniciar atendimento" (abre o atendimento ligado a esta consulta) */
+  pep?: boolean;
+  /** Consultórios ativos (para trocar o consultório em "Editar detalhes") */
+  rooms?: { id: string; unitId: string; name: string }[];
   features: { confirmations: boolean; waitlist: boolean; cancel?: boolean };
   /** Profissionais ativos (para remarcar com outro) */
   professionals: { id: string; name: string }[];
@@ -112,7 +129,7 @@ export function AppointmentDialog({
   const durationNow = Math.round((new Date(appt.endsAt).getTime() - startsMs) / 60_000);
 
   return (
-    <Dialog open={!!appt} onClose={onClose} title={appt.contactName} description={`${appt.when}, ${appt.professionalName}${appt.service ? `, ${appt.service}` : ""}`}>
+    <Dialog open={!!appt} onClose={onClose} title={appt.contactName} description={`${appt.when}, ${appt.professionalName}${appt.service ? `, ${appt.service}` : ""}${placeLabel(appt) ? `. ${placeLabel(appt)}` : ""}`}>
       <div className="space-y-4">
         <p>
           Situação: <strong>{APPOINTMENT_STATUS_LABEL[appt.status]}</strong>
@@ -120,7 +137,7 @@ export function AppointmentDialog({
         </p>
 
         {appt.risk ? (
-          <div className={cn("rounded-xl p-3 text-sm", appt.risk.level === "alto" ? "bg-alert-tint" : appt.risk.level === "medio" ? "bg-erp-tint" : "bg-pep-tint")}>
+          <div className={cn("rounded-xl p-3 text-sm", appt.risk.level === "alto" ? "bg-alert-tint" : appt.risk.level === "medio" ? "bg-erp-tint" : "bg-ok-tint")}>
             <p className="font-bold">
               {RISK_LABEL[appt.risk.level]} de falta ({appt.risk.score}%)
             </p>
@@ -155,9 +172,16 @@ export function AppointmentDialog({
           </div>
         ) : null}
 
+        {/* Prontuário: o profissional começa o atendimento direto da consulta (marca a chegada se faltar) */}
+        {pep && attendanceOpen && appt.status !== "cancelado" && appt.status !== "faltou" ? (
+          <div className="rounded-xl bg-pep-tint p-3">
+            <StartEncounterButton contactId={appt.contactId} appointmentId={appt.id} label="Abrir atendimento no prontuário" />
+          </div>
+        ) : null}
+
         <FormMessage state={state} />
         {notice ? (
-          <p role="status" className="rounded-xl bg-pep-tint px-3 py-2 text-sm font-semibold text-pep-ink">
+          <p role="status" className="rounded-xl bg-ok-tint px-3 py-2 text-sm font-semibold text-ok-ink">
             {notice}
           </p>
         ) : null}
@@ -220,7 +244,8 @@ export function AppointmentDialog({
 
             {editing ? (
               <DetailsForm
-                appt={{ id: appt.id, version: appt.version, service: appt.service, notes: appt.notes, duration: durationNow }}
+                appt={{ id: appt.id, version: appt.version, service: appt.service, notes: appt.notes, duration: durationNow, roomId: appt.roomId ?? null }}
+                rooms={rooms.filter((r) => r.unitId === appt.unitId)}
                 canChangeDuration={appt.status === "agendado" || appt.status === "confirmado"}
                 onDone={() => {
                   setEditing(false);

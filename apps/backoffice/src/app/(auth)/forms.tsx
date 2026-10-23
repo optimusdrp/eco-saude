@@ -35,7 +35,7 @@ export function LoginForm() {
         required
         error={state.errors?.password}
       />
-      <SubmitButton pendingText="Entrando..." className="w-full">
+      <SubmitButton variant="sun" pendingText="Entrando..." className="w-full">
         Entrar
       </SubmitButton>
     </form>
@@ -66,7 +66,7 @@ export function VerifyCodeForm() {
     <form action={action} className="space-y-4" noValidate>
       <FormMessage state={state} />
       <CodeField error={state.errors?.code} />
-      <SubmitButton pendingText="Conferindo..." className="w-full">
+      <SubmitButton variant="sun" pendingText="Conferindo..." className="w-full">
         Confirmar
       </SubmitButton>
     </form>
@@ -101,7 +101,7 @@ export function ChangePasswordForm({ from }: { from?: "conta" }) {
         autoComplete="new-password"
         error={state.errors?.confirm}
       />
-      <SubmitButton className="w-full sm:w-auto">Salvar nova senha</SubmitButton>
+      <SubmitButton variant="sun" className="w-full sm:w-auto">Salvar nova senha</SubmitButton>
     </form>
   );
 }

@@ -1,7 +1,7 @@
 /**
  * PRÓXIMO PASSO DE CADA CARTÃO DA JORNADA (regras puras)
  *
- * "Lead há 3 dias sem resposta: mande esta mensagem", com rascunho pronto.
+ * "Interessado há 3 dias sem resposta: mande esta mensagem", com rascunho pronto.
  *
  *  - nextStep: QUAL é o próximo passo é decidido por REGRAS (etapa, quem falou por
  *    último, há quantos dias, próxima consulta, pergunta de preço). É o que a
@@ -36,7 +36,7 @@ export interface NextStepFacts {
 
 export interface NextStep {
   kind: NextStepKind;
-  /** "Lead há 3 dias sem resposta: mande esta mensagem" */
+  /** "Interessado há 3 dias sem resposta: mande esta mensagem" */
   title: string;
   /** Precisa de uma mensagem (mostra o rascunho) */
   message: boolean;
@@ -58,7 +58,7 @@ export function nextStep(f: NextStepFacts, followUpDays = 2): NextStep | null {
   if ((f.stage === "novo" || f.stage === "em_conversa") && f.lastFrom === "clinica" && (f.daysSinceLast ?? 0) >= followUpDays) {
     return f.askedPrice
       ? { kind: "oferecer_horario", title: `Perguntou valor e sumiu há ${days(f.daysSinceLast!)}: ofereça horários`, message: true }
-      : { kind: "follow_up", title: `Lead há ${days(f.daysSinceLast!)} sem resposta: mande esta mensagem`, message: true };
+      : { kind: "follow_up", title: `Interessado há ${days(f.daysSinceLast!)} sem resposta: mande esta mensagem`, message: true };
   }
   if (f.stage === "reativar" && f.canMarket)
     return {

@@ -309,7 +309,7 @@ export async function aiFeatureStats(tx: Tx): Promise<Record<string, AiFeatureSt
     ia_regra_texto: {
       week: ruleTexts?.total ?? 0,
       note: join([
-        noKey && "Sem a chave do Gemini no servidor: as regras do CRM entendem os pedidos mais comuns.",
+        noKey && "Sem a chave do Gemini no servidor: as regras do Tropi entendem os pedidos mais comuns.",
         !!ruleTexts?.total && `Últimos 30 dias: ${ruleTexts.total} pedidos (${ruleTexts.ia} lidos pela IA); ${ruleTexts.salvas} viraram regra depois da revisão.`,
         ruleTexts?.motivo && `Último plano B: ${ruleTexts.motivo}.`,
       ]),

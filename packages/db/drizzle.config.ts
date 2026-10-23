@@ -7,7 +7,7 @@ import { defineConfig } from "drizzle-kit";
  */
 export default defineConfig({
   dialect: "postgresql",
-  schema: ["./src/schema.ts", "./src/schema-crm.ts"],
+  schema: ["./src/schema.ts", "./src/schema-crm.ts", "./src/schema-pep.ts"],
   out: "./migrations",
   dbCredentials: {
     url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:54320/ecosaude",

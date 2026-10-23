@@ -8,6 +8,7 @@ import { requireCrm } from "@/lib/auth/dal";
 import { now } from "@/lib/clock";
 import { ago } from "@/modules/crm/format";
 import { listRoles, teamAccess } from "@/modules/crm/permissions";
+import { listUnits } from "@/modules/crm/units";
 import { NewUserButton } from "../forms";
 import { TeamDirectory, type TeamMember } from "./TeamDirectory";
 
@@ -24,8 +25,9 @@ export const dynamic = "force-dynamic";
 export default async function TeamPage() {
   const ctx = await requireCrm("config.equipe");
   const current = now();
-  const { users, roles, access } = await withTenant(ctx.user.clinicId, async (tx) => {
+  const { users, roles, access, units } = await withTenant(ctx.user.clinicId, async (tx) => {
     const roles = await listRoles(tx);
+    const units = (await listUnits(tx)).filter((u) => u.active).map((u) => ({ id: u.id, name: u.name }));
     const access = await teamAccess(tx, roles);
     const users = await tx
       .select({
@@ -38,7 +40,7 @@ export default async function TeamPage() {
       })
       .from(schema.clinicUsers)
       .orderBy(asc(schema.clinicUsers.name));
-    return { users, roles, access };
+    return { users, roles, access, units };
   });
   const byId = new Map(users.map((u) => [u.id, u]));
 
@@ -62,6 +64,10 @@ export default async function TeamPage() {
       lastLogin: u.lastLoginAt ? `Último acesso ${ago(u.lastLoginAt, current.getTime())}` : "Nunca acessou",
       isMe: a.id === ctx.user.id,
       attention: !u.totpEnabled || u.mustChangePassword || locked,
+      healthProfessional: a.healthProfessional,
+      unitIds: a.unitIds,
+      health: a.health,
+      linkedProfessional: a.linkedProfessional,
     };
   });
   const active = members.filter((m) => m.active);
@@ -93,7 +99,7 @@ export default async function TeamPage() {
         ))}
       </dl>
 
-      <TeamDirectory members={members} roles={roleOptions} canAccess={ctx.can("config.permissoes")} />
+      <TeamDirectory members={members} roles={roleOptions} canAccess={ctx.can("config.permissoes")} units={units} />
     </>
   );
 }

@@ -6,15 +6,18 @@ import { updateAppointmentDetailsAction } from "@/modules/crm/actions/agenda";
 import { DURATIONS } from "@/components/shell/ScheduleDialog";
 
 /**
- * CORRIGIR DETALHES DA CONSULTA: serviço, observações e duração.
+ * CORRIGIR DETALHES DA CONSULTA: serviço, observações, duração e consultório.
  * Aumentar a duração esbarra na consulta seguinte? O banco recusa e a tela avisa.
  */
 export function DetailsForm({
   appt,
   canChangeDuration,
   onDone,
+  rooms = [],
 }: {
-  appt: { id: string; version: number; service: string | null; notes: string | null; duration: number };
+  appt: { id: string; version: number; service: string | null; notes: string | null; duration: number; roomId?: string | null };
+  /** Consultórios da unidade da consulta (o servidor confere se está livre) */
+  rooms?: { id: string; name: string }[];
   canChangeDuration: boolean;
   onDone: () => void;
 }) {
@@ -45,6 +48,16 @@ export function DetailsForm({
           <input type="hidden" name="durationMinutes" value={appt.duration} />
         )}
       </div>
+      {rooms.length ? (
+        <SelectField label="Consultório" name="roomId" id="ad-room" defaultValue={state.values?.roomId ?? appt.roomId ?? ""} error={state.errors?.roomId} hint="Se o escolhido estiver ocupado nesse horário, o Tropi avisa.">
+          <option value="">Sem consultório definido</option>
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </SelectField>
+      ) : null}
       <TextareaField label="Observação para a equipe" name="notes" id="ad-notes" defaultValue={state.values?.notes ?? appt.notes ?? ""} rows={3} />
       <SubmitButton variant="secondary" pendingText="Salvando...">
         Salvar detalhes

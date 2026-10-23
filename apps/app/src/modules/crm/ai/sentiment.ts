@@ -95,10 +95,10 @@ export async function markSentimentOnInbound(tx: Tx, conversationId: string, mes
   const messages = await recentMessages(tx, conversationId);
   const rules = detectSentiment(messages, Date.now());
 
-  // A IA revisa, salvo: sem chave, conversa com sinal de urgência (fica no CRM) ou mensagem curta e tranquila (economia)
+  // A IA revisa, salvo: sem chave, conversa com sinal de urgência (fica no Tropi) ou mensagem curta e tranquila (economia)
   const lastText = messages.filter((m) => m.from === "paciente").pop()?.text.trim() ?? "";
   const trivial = rules.level === 0 && lastText.length < 4;
-  const fallback = !aiConfigured() ? "IA não configurada no servidor" : conv.urgent ? "conversa com sinal de urgência: fica no CRM, sem IA" : null;
+  const fallback = !aiConfigured() ? "IA não configurada no servidor" : conv.urgent ? "conversa com sinal de urgência: fica no Tropi, sem IA" : null;
   const review = !fallback && !trivial;
 
   await tx

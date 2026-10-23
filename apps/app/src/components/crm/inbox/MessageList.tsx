@@ -9,7 +9,7 @@
  * - Busca dentro da conversa com destaque e "anterior/próxima".
  */
 import { MessageAttachments } from "./Attachments";
-import { AlertTriangle, ArrowDown, Bot, Check, CheckCheck, ChevronDown, ChevronUp, Clock, Copy, Search, StickyNote, X } from "lucide-react";
+import { AlertTriangle, ArrowDown, Bot, Check, CheckCheck, ChevronDown, ChevronUp, Clock, Copy, Search, Smartphone, StickyNote, X } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { cn } from "@/components/ui/styles";
 import type { ThreadMessage } from "./types";
@@ -127,9 +127,9 @@ export function MessageList({ messages, searchOpen, onCloseSearch }: { messages:
           const next = messages[i + 1];
           const showDay = !prev || prev.dayLabel !== m.dayLabel;
           // Mesmo remetente, mesmo dia, até 5 min de diferença: mesma "bolha" visual
-          const sameAsPrev = !!prev && !showDay && prev.direction === m.direction && prev.authorName === m.authorName && prev.auto === m.auto && m.createdMs - prev.createdMs < 5 * 60_000;
+          const sameAsPrev = !!prev && !showDay && prev.direction === m.direction && prev.authorName === m.authorName && prev.auto === m.auto && prev.fromPhone === m.fromPhone && m.createdMs - prev.createdMs < 5 * 60_000;
           const sameAsNext =
-            !!next && next.dayLabel === m.dayLabel && next.direction === m.direction && next.authorName === m.authorName && next.auto === m.auto && next.createdMs - m.createdMs < 5 * 60_000;
+            !!next && next.dayLabel === m.dayLabel && next.direction === m.direction && next.authorName === m.authorName && next.auto === m.auto && next.fromPhone === m.fromPhone && next.createdMs - m.createdMs < 5 * 60_000;
           const isHit = matches.includes(m.id);
           return (
             <Fragment key={m.id}>
@@ -166,6 +166,11 @@ export function MessageList({ messages, searchOpen, onCloseSearch }: { messages:
                         current === m.id && "ring-2 ring-crm",
                       )}
                     >
+                      {m.fromPhone && !sameAsPrev ? (
+                        <p className="mb-0.5 flex items-center gap-1 text-xs font-bold text-crm" title="Respondida direto no celular da clínica: o Tropi não sabe quem da equipe digitou">
+                          <Smartphone className="size-3.5" aria-hidden /> Enviada pelo celular
+                        </p>
+                      ) : null}
                       {m.auto && !sameAsPrev ? (
                         <p className="mb-0.5 flex items-center gap-1 text-xs font-bold text-bi">
                           <Bot className="size-3.5" aria-hidden /> Automático
@@ -193,7 +198,7 @@ export function MessageList({ messages, searchOpen, onCloseSearch }: { messages:
                       aria-label="Copiar texto da mensagem"
                       title={copied === m.id ? "Copiado" : "Copiar"}
                     >
-                      {copied === m.id ? <Check className="size-3.5 text-pep" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+                      {copied === m.id ? <Check className="size-3.5 text-ok" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
                     </button>
                   </div>
                 )}

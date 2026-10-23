@@ -1,10 +1,12 @@
 import "server-only";
-import { ChannelError, credentialsFor, getAdapter, messagingWindow, type OutboundMedia } from "@ecosaude/channels";
+import { ChannelError, getAdapter, messagingWindow, type OutboundMedia } from "@ecosaude/channels";
+import { connectionCredentials, signedMediaUrl } from "./channels";
 import { getStorage } from "./files/storage";
-import { attachmentLabel, firstName, formatDayShort, formatTime, type AttachmentKind, type Channel, type TemplateVariables } from "@ecosaude/core/crm";
-import { and, desc, eq, inArray, schema, sql, withTenant, type Tx } from "@ecosaude/db";
+import { attachmentLabel, firstName, PHONE_SOURCE, formatDayShort, formatTime, type AttachmentKind, type Channel, type TemplateVariables } from "@ecosaude/core/crm";
+import { and, desc, eq, inArray, ne, schema, sql, withTenant, type Tx } from "@ecosaude/db";
 import { UserError } from "@/lib/server";
 import { onAgentReply } from "./journey";
+import { claimPacedWhatsApp, isPacedConnection, whatsappConnection } from "./pacing";
 
 /**
  * Conversas e envio de mensagens.
@@ -70,7 +72,13 @@ export async function bestChannel(tx: Tx, contactId: string): Promise<Channel | 
 }
 
 /** Variáveis de modelo para um contato (e opcionalmente uma consulta). */
-export function templateVars(contact: { name: string }, clinicName: string, appt?: { startsAt: Date; professionalName: string }): TemplateVariables {
+export function templateVars(
+  contact: { name: string },
+  clinicName: string,
+  appt?: { startsAt: Date; professionalName: string },
+  /** Local da consulta (placeVars em units.ts): unidade, endereço e consultório */
+  place?: { local?: string; endereco?: string; consultorio?: string },
+): TemplateVariables {
   return {
     nome: contact.name,
     primeiro_nome: firstName(contact.name),
@@ -78,6 +86,7 @@ export function templateVars(contact: { name: string }, clinicName: string, appt
     data: appt ? formatDayShort(appt.startsAt) : undefined,
     hora: appt ? formatTime(appt.startsAt) : undefined,
     profissional: appt?.professionalName,
+    ...place,
   };
 }
 
@@ -179,6 +188,8 @@ export async function addInternalNote(tx: Tx, conversation: Pick<ConversationRow
 
 /* -------------------------------- Despacho --------------------------------- */
 
+const HELD_MESSAGE = "Canal desconectado: a mensagem sai quando a conexão voltar.";
+
 /**
  * Envia as mensagens em fila de uma clínica pelo adaptador de cada canal.
  *
@@ -190,6 +201,10 @@ export async function addInternalNote(tx: Tx, conversation: Pick<ConversationRow
  */
 export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ sent: number; failed: number }> {
   const claimed = await withTenant(clinicId, async (tx) => {
+    // WhatsApp do celular: as AUTOMÁTICAS não entram no lote; saem uma por vez, no ritmo
+    // (claimPacedWhatsApp). As digitadas pela equipe e os outros canais seguem no lote.
+    const wa = await whatsappConnection(tx);
+    const paced = isPacedConnection(wa);
     const rows = await tx.execute<{
       id: string;
       channel: Channel;
@@ -205,16 +220,24 @@ export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ se
           where status = 'fila' and direction = 'out'
             -- Agendada para o melhor horário do paciente: espera a hora
             and (send_after is null or send_after <= now())
+            ${paced ? sql`and not (channel = 'whatsapp' and author_id is null)` : sql``}
           order by created_at
           limit ${limit}
           for update skip locked)
       returning m.id, m.channel, m.body, m.conversation_id, m.meta, m.template_key, m.send_after`);
+    if (paced) {
+      const next = await claimPacedWhatsApp(tx, wa!);
+      if (next) rows.rows.push(next);
+    }
     const modes = await tx
       .select({
         channel: schema.channelConnections.channel,
         mode: schema.channelConnections.mode,
         active: schema.channelConnections.active,
         account: schema.channelConnections.externalAccountId,
+        kind: schema.channelConnections.kind,
+        credentialsEnc: schema.channelConnections.credentialsEnc,
+        state: schema.channelConnections.connectionState,
       })
       .from(schema.channelConnections);
     const modeOf = new Map(modes.map((m) => [m.channel, m]));
@@ -224,6 +247,7 @@ export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ se
       ? await tx
           .select({
             messageId: schema.messageAttachments.messageId,
+            id: schema.messageAttachments.id,
             kind: schema.messageAttachments.kind,
             mime: schema.messageAttachments.mime,
             fileName: schema.messageAttachments.fileName,
@@ -257,7 +281,7 @@ export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ se
       }
       // Texto livre AGENDADO (melhor horário) que encontra a janela fechada: não sai.
       const blocked = !original && !r.template_key && !!r.send_after && !messagingWindow(r.channel, conv?.lastInboundAt ?? null).open;
-      out.push({ ...r, body, blocked, attachment: attOf.get(r.id) ?? null, to, mode: conn?.mode ?? "simulacao", active: conn?.active ?? true, account: conn?.account ?? null });
+      out.push({ ...r, body, blocked, attachment: attOf.get(r.id) ?? null, to, mode: conn?.mode ?? "simulacao", active: conn?.active ?? true, account: conn?.account ?? null, conn: conn ?? null });
     }
     return out;
   });
@@ -270,13 +294,21 @@ export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ se
       if (msg.blocked) throw new ChannelError("A janela de 24h do canal fechou antes do horário agendado: use um modelo aprovado.", false);
       if (!msg.to) throw new ChannelError("Paciente sem identificador neste canal.", false);
       if (!msg.active) throw new ChannelError("Canal desativado nas configurações.", false);
-      const adapter = getAdapter(msg.channel, msg.mode, credentialsFor(msg.channel, msg.account));
+      // Celular desconectado (WhatsApp por QR code): a mensagem ESPERA na fila e sai quando reconectar
+      if (msg.mode === "real" && (msg.conn?.state === "desconectado" || msg.conn?.state === "conectando")) throw new ChannelError(HELD_MESSAGE, true);
+      // Credenciais DA CLÍNICA (token da página, bot, instância da Evolution), com o ambiente como reserva
+      const adapter = getAdapter(msg.channel, msg.mode, connectionCredentials(msg.conn ? { channel: msg.channel, kind: msg.conn.kind, externalAccountId: msg.conn.account, credentialsEnc: msg.conn.credentialsEnc } : null, msg.channel));
       // Anexo: lê do armazenamento privado e manda junto (o texto vira legenda quando o canal aceita)
       let media: OutboundMedia | undefined;
       if (msg.attachment?.storageKey) {
         const bytes = await (await getStorage()).get(msg.attachment.storageKey);
         if (!bytes) throw new ChannelError("O arquivo do anexo não foi encontrado no armazenamento.", false);
         media = { kind: msg.attachment.kind as AttachmentKind, mime: msg.attachment.mime ?? "application/octet-stream", fileName: msg.attachment.fileName ?? "anexo", bytes };
+        // Instagram: o anexo vai por link temporário e assinado (o arquivo continua privado)
+        if (msg.channel === "instagram" && msg.mode === "real") {
+          const url = signedMediaUrl(clinicId, msg.attachment.id);
+          if (url) media.publicUrl = url;
+        }
       }
       const label = media ? attachmentLabel(media.kind, media.fileName) : null;
       const result = await adapter.send({ to: msg.to, text: media && msg.body === label ? "" : msg.body, ...(media ? { media } : {}) });
@@ -285,10 +317,30 @@ export async function dispatchQueued(clinicId: string, limit = 50): Promise<{ se
       sent++;
     } catch (error) {
       const retryable = error instanceof ChannelError ? error.retryable : true;
-      update = { status: retryable ? "fila" : "falhou", error: (error as Error).message.slice(0, 300) };
+      // Segurada por desconexão: volta "sem tentativa" (sent_at vazio), para o despachante do
+      // servidor mandar assim que reconectar, mesmo se este despacho correu junto com a reconexão
+      const held = (error as Error).message === HELD_MESSAGE;
+      update = { status: retryable ? "fila" : "falhou", error: (error as Error).message.slice(0, 300), ...(held ? { sentAt: null } : {}) };
       failed++;
     }
-    await withTenant(clinicId, (tx) => tx.update(schema.messages).set(update).where(eq(schema.messages.id, msg.id)));
+    await withTenant(clinicId, async (tx) => {
+      // Corrida com o celular: a Evolution pode ter devolvido ESTA mensagem como "enviada pelo
+      // celular" antes de o ID externo ser gravado aqui. Nesse caso o eco é a mesma mensagem:
+      // sai o eco e fica a do Tropi (com autor, modelo e anexo).
+      if (update.externalId) {
+        await tx
+          .delete(schema.messages)
+          .where(
+            and(
+              eq(schema.messages.channel, msg.channel),
+              eq(schema.messages.externalId, update.externalId),
+              ne(schema.messages.id, msg.id),
+              sql`${schema.messages.meta}->>'source' = ${PHONE_SOURCE}`,
+            ),
+          );
+      }
+      await tx.update(schema.messages).set(update).where(eq(schema.messages.id, msg.id));
+    });
   }
   return { sent, failed };
 }
@@ -304,6 +356,9 @@ export async function applyStatusUpdate(tx: Tx, channel: Channel, externalId: st
       and(
         eq(schema.messages.channel, channel),
         eq(schema.messages.externalId, externalId),
+        // Só mensagens ENVIADAS pela clínica: o provedor também avisa "lida" das mensagens do
+        // paciente (e a Evolution, na API oficial, não diz de quem é o status)
+        eq(schema.messages.direction, "out"),
         status === "falhou" ? sql`true` : inArray(schema.messages.status, order.slice(0, order.indexOf(status)) as ("fila" | "enviada" | "entregue")[]),
       ),
     );

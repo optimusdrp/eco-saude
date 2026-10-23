@@ -46,6 +46,11 @@ export function findFreeSlots(opts: {
   tz?: string;
   /** Duração desejada (padrão = duração da consulta do profissional). Os inícios seguem a grade do profissional. */
   durationMinutes?: number;
+  /**
+   * Filtro extra por horário (ex.: há consultório livre? ver roomForSlot em units.ts).
+   * Recusado não conta no limite: a busca continua até achar `limit` horários aceitos.
+   */
+  accept?: (slot: TimeRange) => boolean;
 }): TimeRange[] {
   const { schedule, busy, from, days = 14, limit = 6, period = "qualquer", minLeadMinutes = 60, tz = clinicTimeZone() } = opts;
   const earliest = new Date(from.getTime() + minLeadMinutes * 60_000);
@@ -69,6 +74,7 @@ export function findFreeSlots(opts: {
         const slot = { startsAt: zonedToUtc(date, toHHMM(m), tz), endsAt: zonedToUtc(date, toHHMM(end), tz) };
         if (slot.startsAt < earliest) continue;
         if (busy.some((b) => overlaps(slot, b))) continue;
+        if (opts.accept && !opts.accept(slot)) continue;
         result.push(slot);
       }
     }

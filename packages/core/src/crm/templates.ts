@@ -1,7 +1,7 @@
 /**
  * MENSAGENS AUTOMÁTICAS (catálogo)
  *
- * Todo texto que o CRM manda SOZINHO para o paciente está aqui, com o texto
+ * Todo texto que o Tropi manda SOZINHO para o paciente está aqui, com o texto
  * padrão. A clínica pode reescrever cada um (Ajustes > Mensagens automáticas);
  * o texto da clínica fica na tabela message_templates e vale no lugar do padrão.
  *
@@ -27,22 +27,22 @@ export const TEMPLATE_GROUP_LABEL: Record<TemplateGroup, string> = {
 
 type Var = (typeof TEMPLATE_VARIABLES)[number];
 const BASE: Var[] = ["nome", "primeiro_nome", "clinica"];
-const APPT: Var[] = [...BASE, "data", "hora", "profissional"];
+const APPT: Var[] = [...BASE, "data", "hora", "profissional", "local", "endereco", "consultorio"];
 
 export const MESSAGE_TEMPLATES = [
   // Consultas
   { key: "agendamento", group: "agenda", label: "Consulta marcada", when: "Ao marcar uma consulta com a opção “avisar o paciente”.", optional: false, outsideWindow: true, variables: APPT,
-    body: "Olá, {{primeiro_nome}}! Sua consulta está marcada para {{data}} às {{hora}} com {{profissional}}. Se precisar remarcar, é só responder aqui." },
+    body: "Olá, {{primeiro_nome}}! Sua consulta está marcada para {{data}} às {{hora}} com {{profissional}}{{local}}. Se precisar remarcar, é só responder aqui." },
   { key: "confirmacao", group: "agenda", label: "Pedido de confirmação", when: "Confirmação automática (véspera) ou botão “Pedir confirmação”.", optional: false, outsideWindow: true, variables: APPT,
-    body: "Olá, {{primeiro_nome}}! Confirmando sua consulta {{data}} às {{hora}} com {{profissional}}. Responda 1 para confirmar ou 2 para remarcar." },
+    body: "Olá, {{primeiro_nome}}! Confirmando sua consulta {{data}} às {{hora}} com {{profissional}}{{local}}. Responda 1 para confirmar ou 2 para remarcar." },
   { key: "confirmacao_ok", group: "agenda", label: "Resposta: confirmou", when: "O paciente respondeu 1 (ou “sim”) ao pedido de confirmação.", optional: true, outsideWindow: false, variables: APPT,
     body: "Confirmado, {{primeiro_nome}}! Te esperamos {{data}} às {{hora}}." },
   { key: "confirmacao_remarcar", group: "agenda", label: "Resposta: quer remarcar", when: "O paciente respondeu 2 (ou “não”). A conversa também fica marcada para a recepção.", optional: true, outsideWindow: false, variables: APPT,
     body: "Tudo bem, {{primeiro_nome}}! Alguém da equipe já vai te ajudar a remarcar." },
   { key: "lembrete", group: "agenda", label: "Lembrete no dia", when: "Algumas horas antes da consulta (automação “Lembrete no dia”).", optional: false, outsideWindow: true, variables: APPT,
-    body: "Oi, {{primeiro_nome}}! Lembrete: sua consulta é hoje às {{hora}} com {{profissional}}. Até já!" },
+    body: "Oi, {{primeiro_nome}}! Lembrete: sua consulta é hoje às {{hora}} com {{profissional}}{{local}}. Até já!" },
   { key: "remarcacao", group: "agenda", label: "Consulta remarcada", when: "Ao remarcar com a opção “avisar o paciente”.", optional: false, outsideWindow: true, variables: APPT,
-    body: "Olá, {{primeiro_nome}}! Sua consulta foi remarcada para {{data}} às {{hora}} com {{profissional}}. Se não puder, é só responder aqui." },
+    body: "Olá, {{primeiro_nome}}! Sua consulta foi remarcada para {{data}} às {{hora}} com {{profissional}}{{local}}. Se não puder, é só responder aqui." },
   { key: "cancelamento", group: "agenda", label: "Consulta cancelada", when: "A clínica cancelou a consulta (automação “Avisar cancelamento”).", optional: false, outsideWindow: true, variables: APPT,
     body: "Olá, {{primeiro_nome}}. Sua consulta de {{data}} às {{hora}} com {{profissional}} foi cancelada. Quer marcar outro horário? É só responder aqui." },
   { key: "falta", group: "agenda", label: "Faltou à consulta", when: "Depois de marcar “Faltou” (automação “Mensagem após falta”).", optional: false, outsideWindow: true, variables: APPT,
@@ -51,9 +51,9 @@ export const MESSAGE_TEMPLATES = [
     body: "Obrigado pela visita, {{primeiro_nome}}! Se tiver qualquer dúvida sobre as orientações de hoje, é só escrever aqui." },
   // Lista de espera
   { key: "oferta", group: "espera", label: "Horário oferecido", when: "Um horário liberado é oferecido a quem está na lista de espera.", optional: false, outsideWindow: true, variables: APPT,
-    body: "Olá, {{primeiro_nome}}! Abriu um horário {{data}} às {{hora}} com {{profissional}}. Quer ficar com ele? Responda SIM. Quem responder primeiro garante a vaga." },
+    body: "Olá, {{primeiro_nome}}! Abriu um horário {{data}} às {{hora}} com {{profissional}}{{local}}. Quer ficar com ele? Responda SIM. Quem responder primeiro garante a vaga." },
   { key: "oferta_aceita", group: "espera", label: "Horário garantido", when: "O paciente respondeu SIM primeiro e ficou com a vaga.", optional: false, outsideWindow: false, variables: APPT,
-    body: "Horário garantido, {{primeiro_nome}}! {{data}} às {{hora}} com {{profissional}}. Te esperamos!" },
+    body: "Horário garantido, {{primeiro_nome}}! {{data}} às {{hora}} com {{profissional}}{{local}}. Te esperamos!" },
   { key: "oferta_recusada", group: "espera", label: "Recusou o horário", when: "O paciente respondeu NÃO à oferta.", optional: true, outsideWindow: false, variables: BASE,
     body: "Tudo bem, {{primeiro_nome}}! Você continua na lista de espera e avisaremos no próximo horário." },
   { key: "oferta_perdida", group: "espera", label: "Chegou tarde", when: "Respondeu SIM, mas outra pessoa já tinha ficado com o horário.", optional: false, outsideWindow: false, variables: BASE,
@@ -112,6 +112,9 @@ export const VARIABLE_LABEL: Record<Var, string> = {
   profissional: "Profissional",
   horario_atendimento: "Horário de atendimento",
   link_avaliacao: "Link de avaliação",
+  local: "Unidade e endereço (só aparece com mais de uma unidade)",
+  endereco: "Endereço da unidade",
+  consultorio: "Consultório",
 };
 
 /** Valores de exemplo para a prévia. */
@@ -124,6 +127,9 @@ export const SAMPLE_VARIABLES: Record<Var, string> = {
   profissional: "Dra. Beatriz Lemos",
   horario_atendimento: "de segunda a sexta, das 8h às 18h",
   link_avaliacao: "https://g.page/r/clinica-exemplo/review",
+  local: ", na Unidade Centro (Rua das Flores, 100, Centro)",
+  endereco: "Rua das Flores, 100, Centro, Porto Alegre - RS",
+  consultorio: "Consultório 2",
 };
 
 /** Variáveis usadas no texto que esta mensagem não preenche (aviso na tela). */

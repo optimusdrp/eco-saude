@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, CalendarClock, CalendarDays, Hourglass, ListChecks, Lock, LogOut, Menu, MessagesSquare, Radio, Route, Search, Settings, Sun, Users, Wifi, WifiOff, X } from "lucide-react";
+import { Award, CalendarClock, ClipboardPlus, Stethoscope, CalendarDays, Hourglass, ListChecks, Lock, LogOut, Menu, MessagesSquare, Radio, Route, Search, Settings, Sun, Users, Wifi, WifiOff, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { logoutAction } from "@/lib/auth/actions";
 import { emit } from "@/lib/events";
 import { useAppEvent, useOnline } from "@/lib/hooks";
 import { CommandPalette } from "./CommandPalette";
+import { NoticeBell } from "./NoticeBell";
 import { LogoMark } from "./LogoMark";
 import { PatientRail } from "./PatientRail";
 import { ScheduleDialog, type ProfessionalOption } from "./ScheduleDialog";
@@ -24,7 +25,7 @@ import { UiPrefsSync } from "@/lib/uiPrefs";
  * Celular: barra inferior com 4 atalhos + "Mais"; o trilho vira uma folha.
  */
 
-export type NavIcon = "hoje" | "conversas" | "agenda" | "jornada" | "pacientes" | "retornos" | "espera" | "tarefas" | "qualidade" | "config";
+export type NavIcon = "hoje" | "conversas" | "agenda" | "jornada" | "pacientes" | "retornos" | "espera" | "tarefas" | "qualidade" | "prontuario" | "consultorio" | "config";
 
 export interface NavItem {
   href: string;
@@ -51,10 +52,24 @@ const icons = {
   espera: Hourglass,
   tarefas: ListChecks,
   qualidade: Award,
+  prontuario: ClipboardPlus,
+  consultorio: Stethoscope,
   config: Settings,
 };
 
 const moduleDot = { crm: "bg-crm", erp: "bg-erp", pep: "bg-pep", bi: "bg-bi" };
+
+/** Tela inicial de cada módulo contratado (os demais mostram a apresentação em /modulos/<id>) */
+const moduleHome: Partial<Record<ModuleItem["id"], string>> = { crm: "/hoje", pep: "/consultorio" };
+
+/** Qual módulo a tela atual pertence (destaca o chip na barra superior) */
+function activeModule(pathname: string): ModuleItem["id"] | null {
+  if (pathname.startsWith("/prontuario") || pathname.startsWith("/consultorio")) return "pep";
+  const m = pathname.match(/^\/modulos\/(crm|erp|pep|bi)/);
+  if (m) return m[1] as ModuleItem["id"];
+  if (pathname.startsWith("/configuracoes")) return null;
+  return "crm";
+}
 
 /* ------------------------- Contexto do trilho do paciente ------------------------- */
 
@@ -82,6 +97,7 @@ export function AppShell({
   modules,
   professionals,
   simulator,
+  channelAlert = null,
   children,
 }: {
   user: { name: string; roleLabel: string };
@@ -90,6 +106,8 @@ export function AppShell({
   modules: ModuleItem[];
   professionals: ProfessionalOption[];
   simulator: boolean;
+  /** Canais conectados que caíram (a fila espera; alguém precisa reconectar) */
+  channelAlert?: { channels: string[]; canFix: boolean } | null;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -127,8 +145,13 @@ export function AppShell({
     togglePin: () => setPinned((p) => !p),
   };
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href.startsWith("/prontuario") && pathname.startsWith("/prontuario"));
   const main = nav.filter((n) => n.icon !== "config");
+  const current = activeModule(pathname);
+  const homeHref = nav[0]?.href ?? "/configuracoes";
+  // Prontuário: a primeira tela dele que a pessoa pode abrir (Consultório ou Prontuário)
+  const pepHome = nav.find((n) => n.icon === "consultorio" || n.icon === "prontuario")?.href;
+  const moduleHref = (m: ModuleItem) => (!m.enabled ? `/modulos/${m.id}` : m.id === "pep" ? (pepHome ?? `/modulos/${m.id}`) : (moduleHome[m.id] ?? `/modulos/${m.id}`));
   const config = nav.find((n) => n.icon === "config");
 
   return (
@@ -136,8 +159,8 @@ export function AppShell({
       <div className="min-h-dvh lg:grid lg:grid-cols-[5.75rem_minmax(0,1fr)] print:block">
         {/* ------------------------- Trilho de navegação (desktop) ------------------------- */}
         <aside className="sticky top-0 hidden h-dvh flex-col items-center gap-2 bg-night py-4 lg:flex print:hidden" aria-label="Navegação principal">
-          <Link href="/hoje" className="mb-3 rounded-xl p-1" aria-label="EcoSaúde, ir para Hoje">
-            <LogoMark className="size-9" />
+          <Link href={homeHref} className="mb-3 rounded-xl p-1" aria-label="Tropi, ir para o início">
+            <LogoMark className="size-9" onDark />
           </Link>
           <nav className="flex w-full flex-1 flex-col items-center gap-1 px-2">
             {main.map((item) => (
@@ -157,7 +180,7 @@ export function AppShell({
           {/* --------------------------------- Barra superior --------------------------------- */}
           <header className="sticky top-0 z-30 border-b border-line bg-fog/90 backdrop-blur print:hidden">
             <div className="flex h-14 items-center gap-2 px-3 sm:px-5">
-              <Link href="/hoje" className="lg:hidden" aria-label="EcoSaúde, ir para Hoje">
+              <Link href={homeHref} className="lg:hidden" aria-label="Tropi, ir para o início">
                 <LogoMark className="size-8" />
               </Link>
               <div className="min-w-0 flex-1">
@@ -172,11 +195,11 @@ export function AppShell({
                 {modules.map((m) => (
                   <Link
                     key={m.id}
-                    href={m.enabled ? (m.id === "crm" ? "/hoje" : `/modulos/${m.id}`) : `/modulos/${m.id}`}
-                    aria-current={m.id === "crm" && !pathname.startsWith("/modulos") ? "page" : undefined}
+                    href={moduleHref(m)}
+                    aria-current={current === m.id ? "page" : undefined}
                     className={cn(
                       "inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold",
-                      m.id === "crm" && !pathname.startsWith("/modulos") ? "bg-ink text-white" : "text-ink-soft hover:text-ink",
+                      current === m.id ? "bg-ink text-white" : "text-ink-soft hover:text-ink",
                     )}
                   >
                     {m.enabled ? <span className={cn("size-2 rounded-full", moduleDot[m.id])} aria-hidden /> : <Lock className="size-3.5" aria-label="não contratado" />}
@@ -187,11 +210,14 @@ export function AppShell({
 
               <span
                 role="status"
-                className={cn("hidden items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold sm:inline-flex", online ? "bg-pep-tint text-pep-ink" : "bg-erp-tint text-erp-ink")}
+                className={cn("hidden items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold sm:inline-flex", online ? "bg-ok-tint text-ok-ink" : "bg-erp-tint text-erp-ink")}
               >
                 {online ? <Wifi className="size-3.5" aria-hidden /> : <WifiOff className="size-3.5" aria-hidden />}
                 {online ? "Conectado" : "Sem internet"}
               </span>
+
+              {/* Avisos ativos (acesso de emergência, triagem urgente) */}
+              <NoticeBell />
 
               <button
                 type="button"
@@ -207,6 +233,18 @@ export function AppShell({
             {!online ? (
               <p className="border-t border-erp/30 bg-erp-tint px-4 py-1.5 text-center text-xs font-semibold text-erp-ink">
                 Sem internet. Consultas continuam visíveis; envios ficam para quando a conexão voltar (modo offline completo na próxima etapa).
+              </p>
+            ) : null}
+            {channelAlert ? (
+              <p role="alert" className="border-t border-alert/30 bg-alert-tint px-4 py-1.5 text-center text-xs font-semibold text-alert">
+                {channelAlert.channels.join(" e ")} desconectado: as mensagens esperam na fila.{" "}
+                {channelAlert.canFix ? (
+                  <Link href="/configuracoes/canais" className="underline underline-offset-2">
+                    Reconectar
+                  </Link>
+                ) : (
+                  "Avise a gestão da clínica."
+                )}
               </p>
             ) : null}
           </header>
@@ -293,7 +331,7 @@ export function AppShell({
               <ul className="mt-3 flex flex-wrap gap-2" aria-label="Módulos">
                 {modules.map((m) => (
                   <li key={m.id}>
-                    <Link href={m.id === "crm" ? "/hoje" : `/modulos/${m.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-fog px-3 text-sm font-semibold">
+                    <Link href={moduleHref(m)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-fog px-3 text-sm font-semibold">
                       {m.enabled ? <span className={cn("size-2 rounded-full", moduleDot[m.id])} aria-hidden /> : <Lock className="size-3.5" aria-label="não contratado" />}
                       {m.label}
                     </Link>

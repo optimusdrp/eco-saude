@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * MENSAGENS AUTOMÁTICAS (exige "config.mensagens")
- * Todos os textos que o CRM envia sozinho, num lugar só: confirmação, lembrete,
+ * Todos os textos que o Tropi envia sozinho, num lugar só: confirmação, lembrete,
  * lista de espera, pesquisa, boas-vindas, aniversário, SAIR/VOLTAR...
  * Cada um com prévia, variáveis, "voltar ao padrão" e (quando faz sentido) desligar.
  */
@@ -58,7 +58,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
     <>
       <PageHeader
         title="Mensagens automáticas"
-        description="Os textos que o CRM envia sozinho. Escreva do jeito da clínica: o paciente recebe exatamente o que estiver aqui, com o nome e a consulta dele no lugar das variáveis."
+        description="Os textos que o Tropi envia sozinho. Escreva do jeito da clínica: o paciente recebe exatamente o que estiver aqui, com o nome e a consulta dele no lugar das variáveis."
       />
       <MessagesWorkspace templates={views} clinicName={ctx.user.clinicName} initialKey={msg ?? null} canAutomations={ctx.can("config.automacoes")} />
     </>

@@ -122,13 +122,13 @@ export function ConversationList({
         {counts.esperando ? (
           <div className="rounded-xl bg-fog px-3 py-2">
             <div className="flex items-baseline justify-between gap-2 text-xs">
-              <span className={cn("font-semibold", late ? "text-alert" : "text-pep-ink")}>
+              <span className={cn("font-semibold", late ? "text-alert" : "text-ok-ink")}>
                 {late ? `${late} acima da meta de ${FIRST_RESPONSE_TARGET_MIN} min` : `Todos dentro da meta de ${FIRST_RESPONSE_TARGET_MIN} min`}
               </span>
               {counts.maisAntigaMs ? <span className="text-ink-soft">mais antiga há {waitLabel(new Date(counts.maisAntigaMs), nowMs)}</span> : null}
             </div>
             <div className="mt-1.5 flex h-1.5 overflow-hidden rounded-full bg-paper" role="img" aria-label={`${onTime} dentro da meta, ${late} acima da meta`}>
-              <span className="bg-pep" style={{ width: `${(onTime / counts.esperando) * 100}%` }} />
+              <span className="bg-ok" style={{ width: `${(onTime / counts.esperando) * 100}%` }} />
               <span className="bg-alert" style={{ width: `${(late / counts.esperando) * 100}%` }} />
             </div>
           </div>
@@ -208,7 +208,7 @@ export function ConversationList({
 
       {selecting ? <BulkBar ids={visiblePicked} total={items.length} team={team} onAll={() => setPicked(new Set(items.map((i) => i.id)))} onDone={stopSelecting} /> : null}
       {notice && !selecting ? (
-        <p role="status" className="flex items-center justify-between gap-2 border-b border-line bg-pep-tint px-3 py-2 text-sm font-semibold text-pep-ink">
+        <p role="status" className="flex items-center justify-between gap-2 border-b border-line bg-ok-tint px-3 py-2 text-sm font-semibold text-ok-ink">
           {notice}
           <button type="button" onClick={() => setNotice(null)} className="inline-flex size-8 items-center justify-center rounded-lg hover:bg-paper/60" aria-label="Fechar aviso">
             <X className="size-4" aria-hidden />
@@ -399,7 +399,7 @@ function BulkBar({ ids, total, team, onAll, onDone }: { ids: string[]; total: nu
         </form>
       </div>
       {state.message ? (
-        <p role="status" className={cn("text-xs font-semibold", state.ok ? "text-pep-ink" : "text-alert")}>
+        <p role="status" className={cn("text-xs font-semibold", state.ok ? "text-ok-ink" : "text-alert")}>
           {state.message}
         </p>
       ) : null}

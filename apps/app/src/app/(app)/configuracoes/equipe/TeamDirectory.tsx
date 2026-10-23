@@ -33,12 +33,16 @@ export interface TeamMember {
   isMe: boolean;
   /** Algo a resolver: sem 2 etapas, senha temporária ou bloqueado */
   attention: boolean;
+  healthProfessional: boolean;
+  unitIds: string[];
+  health: { council: string | null; number: string | null; uf: string | null };
+  linkedProfessional: { name: string; council: string | null } | null;
 }
 
 type Status = "" | "atencao" | "desativados";
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export function TeamDirectory({ members, roles, canAccess }: { members: TeamMember[]; roles: AccessRole[]; canAccess: boolean }) {
+export function TeamDirectory({ members, roles, canAccess, units = [] }: { members: TeamMember[]; roles: AccessRole[]; canAccess: boolean; units?: { id: string; name: string }[] }) {
   const [q, setQ] = useState("");
   const [role, setRole] = useState("");
   const [editing, setEditing] = useState<TeamMember | null>(null);
@@ -104,6 +108,8 @@ export function TeamDirectory({ members, roles, canAccess }: { members: TeamMemb
                   <p className="truncate text-sm text-ink-soft">{u.email}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     <Badge tone="crm">{u.roleName}</Badge>
+                    {u.healthProfessional ? <Badge tone="pep">Profissional de saúde</Badge> : null}
+                    {units.length > 1 && u.unitIds.length ? <Badge>{units.filter((x) => u.unitIds.includes(x.id)).map((x) => x.name).join(", ") || "unidade desativada"}</Badge> : null}
                     {u.grants.length + u.revokes.length ? (
                       <Badge tone="dark" className="tabular">
                         ajuste individual {u.grants.length ? `+${u.grants.length}` : ""} {u.revokes.length ? `−${u.revokes.length}` : ""}
@@ -136,7 +142,8 @@ export function TeamDirectory({ members, roles, canAccess }: { members: TeamMemb
         </ul>
       )}
       <Dialog open={!!editing} onClose={closeAccess} title={editing ? `Acesso de ${editing.name}` : "Acesso"} description="Escolha o perfil e, se precisar, libere ou bloqueie algo só para esta pessoa." wide>
-        {editing ? <AccessForm key={editing.id} person={{ id: editing.id, name: editing.name, roleId: editing.roleId, grants: editing.grants, revokes: editing.revokes, isMe: editing.isMe }} roles={roles} onSaved={closeAccess} /> : null}
+        {editing ? <AccessForm key={editing.id} person={{ id: editing.id, name: editing.name, roleId: editing.roleId, grants: editing.grants, revokes: editing.revokes, isMe: editing.isMe, health: editing.health, linkedProfessional: editing.linkedProfessional, unitIds: editing.unitIds }}
+            units={units} roles={roles} onSaved={closeAccess} /> : null}
       </Dialog>
     </section>
   );

@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start --port 3002",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:prepare": "node e2e/prepare.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1143.0",
@@ -18,12 +20,14 @@
     "@ecosaude/core": "workspace:*",
     "@ecosaude/db": "workspace:*",
     "@ecosaude/tokens": "workspace:*",
-    "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
     "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "@fontsource-variable/instrument-sans": "5.3.0",
+    "@pdf-lib/fontkit": "1.1.1",
     "bcryptjs": "3.0.3",
     "clsx": "2.1.1",
     "lucide-react": "1.53.0",
-    "next": "16.4.0",
+    "next": "16.4.2",
+    "pdf-lib": "1.17.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "0.0.1",
@@ -31,12 +35,15 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.6.4",
+    "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.2",
+    "pg": "8.23.1",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3"
   }

@@ -49,7 +49,7 @@ function driverReady(name: DriverName): boolean {
 }
 
 function from(): string {
-  return process.env.EMAIL_FROM || "EcoSaúde <nao-responda@ecosaude.local>";
+  return process.env.EMAIL_FROM || "Tropi <nao-responda@tropi.local>";
 }
 
 /* --------------------------------- Drivers --------------------------------- */

@@ -1,0 +1,7 @@
+# Proxy HTTPS para a Evolution. O painel /manager fica BLOQUEADO na internet:
+# para usar, abra um túnel SSH (ssh -L 8080:localhost:443 ...) ou libere só o seu IP.
+{$EVOLUTION_DOMAIN} {
+	@manager path /manager*
+	respond @manager "Not found" 404
+	reverse_proxy evolution:8080
+}

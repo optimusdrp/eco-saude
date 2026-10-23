@@ -97,7 +97,7 @@ export default async function SecurityPage() {
       <div className="mb-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Panel title="Pendências de segurança" description={issues.length ? "Resolva em Equipe e permissões (cada pessoa liga as 2 etapas em Minha conta)." : undefined}>
           {issues.length === 0 ? (
-            <p className="flex items-center gap-2 text-sm font-semibold text-pep-ink">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ok-ink">
               <CheckCircle2 className="size-5" aria-hidden /> Nada pendente. Toda a equipe está protegida.
             </p>
           ) : (

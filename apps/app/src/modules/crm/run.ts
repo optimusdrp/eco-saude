@@ -6,7 +6,7 @@ import { dispatchQueued } from "./messaging";
 import { scopeFrom, type CrmScope } from "./scope";
 
 /**
- * Executa uma regra do CRM numa transação isolada na clínica e, ao final,
+ * Executa uma regra do Tropi numa transação isolada na clínica e, ao final,
  * despacha as mensagens que ela colocou na fila.
  *
  * O despacho acontece DEPOIS do commit: se algo falhar no meio da regra,

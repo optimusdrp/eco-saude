@@ -89,7 +89,7 @@ function Item({ id, label, value, evidence, source, canEdit }: { id: string; lab
         <span>
           <span className="text-ink-soft">{label}:</span> <strong className="break-all">{value}</strong>
         </span>
-        <span className={cn("inline-flex items-center gap-0.5 text-[0.7rem]", source === "ia" ? "text-crm" : "text-ink-soft")} title={source === "ia" ? "Sugerido pela IA" : "Pelas regras do CRM"}>
+        <span className={cn("inline-flex items-center gap-0.5 text-[0.7rem]", source === "ia" ? "text-crm" : "text-ink-soft")} title={source === "ia" ? "Sugerido pela IA" : "Pelas regras do Tropi"}>
           {source === "ia" ? <Sparkles className="size-3" aria-hidden /> : <Bot className="size-3" aria-hidden />}
           {source === "ia" ? "IA" : "regras"}
         </span>
@@ -102,7 +102,7 @@ function Item({ id, label, value, evidence, source, canEdit }: { id: string; lab
             <button
               type="submit"
               disabled={applying}
-              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-paper px-2.5 text-xs font-semibold text-pep-ink ring-1 ring-line hover:ring-pep disabled:opacity-50"
+              className="inline-flex min-h-8 items-center gap-1 rounded-lg bg-paper px-2.5 text-xs font-semibold text-ok-ink ring-1 ring-line hover:ring-ok disabled:opacity-50"
             >
               <Check className="size-3.5" aria-hidden /> Aplicar
             </button>

@@ -23,6 +23,7 @@ import { automationSettings } from "../automation-settings";
 import { loadWorkSchedule } from "../hours";
 import type { CrmScope } from "../scope";
 import { aiConfigured, AiError, generate } from "./provider";
+import { roomFilterFor } from "@/modules/crm/units";
 
 /**
  * RASCUNHO DE RESPOSTA (orquestração)
@@ -251,7 +252,9 @@ async function buildContext(
       .select({ startsAt: schema.appointments.startsAt, endsAt: schema.appointments.endsAt })
       .from(schema.appointments)
       .where(and(eq(schema.appointments.professionalId, pro.id), ne(schema.appointments.status, "cancelado"), gt(schema.appointments.endsAt, now)));
-    freeSlots = findFreeSlots({ schedule: await loadWorkSchedule(tx, pro), busy, from: now, limit: 6 }).map((s) => formatWhen(s.startsAt, now));
+    // Só horários com consultório livre (a busca padrão olha 14 dias)
+    const rooms = await roomFilterFor(tx, pro, now, new Date(now.getTime() + 15 * 86_400_000));
+    freeSlots = findFreeSlots({ schedule: await loadWorkSchedule(tx, pro), busy, from: now, limit: 6, accept: rooms.accept }).map((s) => formatWhen(s.startsAt, now));
   }
 
   const c = conv.contact;

@@ -1,11 +1,10 @@
 /**
- * @ecosaude/channels: integração do CRM com WhatsApp, Telegram, Instagram e Messenger.
+ * @ecosaude/channels: integração do Tropi com WhatsApp, Telegram, Instagram e Messenger.
  *
- * Hoje todas as clínicas usam o modo "simulacao". Para ligar um canal de verdade:
- *  1. preencher as credenciais no .env (ver .env.example, seção Canais)
- *  2. em Configurações > Canais, trocar o canal para "real" e informar o ID da conta
- *  3. cadastrar a URL do webhook no provedor: https://SEU-DOMINIO/api/webhooks/<canal>
- * Nenhuma tela nem regra do CRM muda: só o adaptador usado.
+ * Cada clínica escolhe, em Ajustes > Canais, COMO cada canal se conecta:
+ *  - WhatsApp: celular por QR code/código (Evolution), API oficial via Evolution ou API oficial direto na Meta
+ *  - Instagram: login do Instagram ou página do Facebook; Messenger: página; Telegram: bot
+ * Nenhuma tela nem regra do Tropi muda com a escolha: só o adaptador usado.
  *
  * Este pacote não depende de Next.js nem de banco: pode ser movido para um
  * microsserviço próprio (ex.: AWS Lambda + fila SQS) sem alterações.
@@ -13,9 +12,12 @@
 import { randomUUID } from "node:crypto";
 import { CHANNEL_WINDOW_HOURS, type Channel, type ChannelMode } from "@ecosaude/core/crm";
 import { createMessagingAdapter, createWhatsAppAdapter, parseMessagingWebhook, parseWhatsAppWebhook, sampleMessagingPayload, sampleWhatsAppPayload, type SampleMedia } from "./meta";
+import { createEvolutionAdapter } from "./evolution";
 import { createTelegramAdapter, parseTelegramUpdate, sampleTelegramUpdate } from "./telegram";
-import type { ChannelAdapter, ChannelCredentials, FetchLike, WebhookResult } from "./types";
+import { ChannelError, type ChannelAdapter, type ChannelCredentials, type FetchLike, type WebhookResult } from "./types";
 
+export * from "./evolution";
+export * from "./evolution-capture";
 export * from "./media";
 export * from "./meta";
 export * from "./telegram";
@@ -56,6 +58,11 @@ export function getAdapter(channel: Channel, mode: ChannelMode, creds: ChannelCr
   if (mode === "simulacao") return createSimulatedAdapter(channel);
   switch (channel) {
     case "whatsapp":
+      // QR code ou Cloud API pela Evolution: o mesmo adaptador (a Evolution padroniza os dois)
+      if (creds.kind === "evolution_qr" || creds.kind === "evolution_cloud") {
+        if (!creds.evolutionUrl || !creds.evolutionApiKey || !creds.instance) throw new ChannelError("Evolution API não configurada no servidor (EVOLUTION_API_URL e EVOLUTION_API_KEY).", false);
+        return createEvolutionAdapter({ baseUrl: creds.evolutionUrl, apiKey: creds.evolutionApiKey, ...(fetchFn ? { fetchFn } : {}) }, creds.instance, { cloud: creds.kind === "evolution_cloud" });
+      }
       return createWhatsAppAdapter(creds, fetchFn);
     case "telegram":
       return createTelegramAdapter(creds, fetchFn);
@@ -98,7 +105,7 @@ export interface WindowState {
  * Fora disso, só modelos aprovados. O Telegram não tem essa regra.
  */
 /**
- * Credenciais de UMA clínica: o token vem do ambiente (app da EcoSaúde como
+ * Credenciais de UMA clínica: o token vem do ambiente (app do Tropi como
  * provedor de tecnologia da Meta / cofre de segredos) e o identificador da
  * conta vem do cadastro do canal da clínica (channel_connections).
  * Assim várias clínicas usam o mesmo app, cada uma com seu número/página.

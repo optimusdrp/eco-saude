@@ -13,7 +13,7 @@ import { DuplicateHint, useDuplicateCheck, type DuplicateProbe } from "./Duplica
  * FORMULÁRIO DE PACIENTE (cadastro e edição)
  * - O mesmo componente serve para criar e editar (com "version" para
  *   impedir que duas pessoas sobrescrevam a alteração uma da outra).
- * - Consentimento LGPD explícito: sem ele, o CRM não envia lembretes de
+ * - Consentimento LGPD explícito: sem ele, o Tropi não envia lembretes de
  *   retorno nem campanhas (só mensagens do próprio atendimento).
  */
 export interface ContactFormValues {
@@ -23,6 +23,8 @@ export interface ContactFormValues {
   phone: string;
   email: string;
   birthDate: string;
+  sex?: string;
+  cpf?: string;
   preferredChannel: Channel | "";
   source: string;
   tags: string;
@@ -94,6 +96,12 @@ export function ContactForm({
         />
         <Field label="E-mail" name="email" id={`${idPrefix}-email`} type="email" defaultValue={v("email")} error={state.errors?.email} />
         <Field label="Nascimento" name="birthDate" id={`${idPrefix}-birth`} type="date" defaultValue={v("birthDate")} error={state.errors?.birthDate} />
+        <SelectField label="Sexo" name="sex" id={`${idPrefix}-sex`} defaultValue={v("sex")} hint="Usado no prontuário.">
+          <option value="">Não informado</option>
+          <option value="F">Feminino</option>
+          <option value="M">Masculino</option>
+        </SelectField>
+        <Field label="CPF" name="cpf" id={`${idPrefix}-cpf`} inputMode="numeric" defaultValue={v("cpf")} error={state.errors?.cpf} hint="Opcional. Vai nos documentos clínicos (receita, atestado)." />
         <SelectField label="Canal preferido" name="preferredChannel" id={`${idPrefix}-channel`} defaultValue={v("preferredChannel")}>
           <option value="">Automático (último usado)</option>
           {CHANNELS.map((c) => (
@@ -137,7 +145,7 @@ export function NewContactButton({ label = "Novo contato" }: { label?: string })
       <button type="button" onClick={() => setOpen(true)} className={buttonStyles("primary")}>
         <UserPlus className="size-4" aria-hidden /> {label}
       </button>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Novo contato" description="Lead ou paciente. Só o nome é obrigatório. O resto pode ser completado depois.">
+      <Dialog open={open} onClose={() => setOpen(false)} title="Novo contato" description="Interessado ou paciente. Só o nome é obrigatório. O resto pode ser completado depois.">
         <ContactForm
           idPrefix="new"
           onDone={(id) => {

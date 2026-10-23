@@ -1,5 +1,5 @@
 /**
- * Vocabulário do CRM (canais, jornada, agenda, perfis da clínica).
+ * Vocabulário do Tropi (canais, jornada, agenda, perfis da clínica).
  * Banco, telas e regras usam estas listas: um novo status é criado AQUI.
  */
 
@@ -30,6 +30,42 @@ export const CHANNEL_WINDOW_HOURS: Record<Channel, number | null> = {
 
 export const CHANNEL_MODES = ["simulacao", "real"] as const;
 export type ChannelMode = (typeof CHANNEL_MODES)[number];
+
+/**
+ * COMO cada canal se conecta (a clínica escolhe na tela de Canais).
+ *  WhatsApp:
+ *   - evolution_qr:    WhatsApp do celular da clínica, pareado por QR code ou código de 8 letras
+ *                      (via Evolution API / Baileys). NÃO é oficial da Meta: risco de bloqueio do número.
+ *   - evolution_cloud: API oficial (Cloud API) da Meta, passando pela Evolution API.
+ *   - meta_cloud:      API oficial (Cloud API) direto na Meta, sem Evolution.
+ *  Instagram:
+ *   - instagram_login: "Instagram API com login do Instagram" (graph.instagram.com, não exige página do Facebook)
+ *   - facebook_login:  Instagram ligado a uma página do Facebook (graph.facebook.com)
+ *  Messenger: page (token da página). Telegram: bot (token do @BotFather).
+ */
+export const CONNECTION_KINDS = ["evolution_qr", "evolution_cloud", "meta_cloud", "instagram_login", "facebook_login", "page", "bot"] as const;
+export type ConnectionKind = (typeof CONNECTION_KINDS)[number];
+
+export const CHANNEL_CONNECTION_KINDS: Record<Channel, readonly ConnectionKind[]> = {
+  whatsapp: ["evolution_qr", "evolution_cloud", "meta_cloud"],
+  instagram: ["instagram_login", "facebook_login"],
+  facebook: ["page"],
+  telegram: ["bot"],
+};
+
+export const CONNECTION_KIND_LABEL: Record<ConnectionKind, string> = {
+  evolution_qr: "WhatsApp do celular (QR code ou código)",
+  evolution_cloud: "API oficial da Meta via Evolution",
+  meta_cloud: "API oficial da Meta, direto",
+  instagram_login: "Login do Instagram (sem página do Facebook)",
+  facebook_login: "Instagram ligado a uma página do Facebook",
+  page: "Página do Facebook",
+  bot: "Bot do Telegram",
+};
+
+/** Estado da conexão com o provedor (o WhatsApp do celular cai quando o aparelho fica sem internet por muito tempo). */
+export const CONNECTION_STATES = ["desconectado", "conectando", "conectado", "erro"] as const;
+export type ConnectionState = (typeof CONNECTION_STATES)[number];
 
 /* --------------------------------- Jornada --------------------------------- */
 
@@ -154,7 +190,7 @@ export const CLINIC_ROLE_LABEL: Record<ClinicRole, string> = {
 /* ---------------------------- Funcionalidades (plano) ---------------------- */
 
 /**
- * Chaves das funcionalidades do CRM (as mesmas do catálogo no backoffice).
+ * Chaves das funcionalidades do Tropi (as mesmas do catálogo no backoffice).
  * O plano contratado decide quais ficam liberadas.
  */
 export const CRM_FEATURES = {

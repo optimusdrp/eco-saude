@@ -145,7 +145,7 @@ export function ThreadControls({
         </form>
       ) : null}
       {state.message ? (
-        <p role="status" className={cn("text-xs font-semibold", state.ok ? "text-pep-ink" : "text-alert")}>
+        <p role="status" className={cn("text-xs font-semibold", state.ok ? "text-ok-ink" : "text-alert")}>
           {state.message}
         </p>
       ) : null}

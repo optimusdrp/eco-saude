@@ -7,16 +7,41 @@
  * (ex.: LeadStage = "novo" | "contato" | ...).
  */
 
+/* ------------------------------- Marca -------------------------------- */
+
+/**
+ * Identidade do ecossistema em UM lugar: trocar o nome ou o slogan é mudar aqui.
+ * Grafia: "Tropi" no texto, "tropi" (minúsculas) só no logotipo. Nunca "TROPI".
+ * Tropi vem de tropismo: o movimento em direção à luz.
+ */
+export const BRAND = {
+  name: "Tropi",
+  /** Slogan: a jornada inteira do paciente, que atravessa os quatro módulos */
+  tagline: "Do primeiro contato ao retorno.",
+  /** Como a equipe de suporte é chamada nos textos ("fale com a equipe Tropi") */
+  team: "equipe Tropi",
+} as const;
+
 /* ------------------------------ Módulos ------------------------------ */
 
+/** Ids internos (rotas, banco, planos). NÃO mudam com a marca: só os nomes exibidos mudam. */
 export const MODULE_IDS = ["crm", "erp", "pep", "bi"] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 
+/** Nome curto do módulo (dentro do Tropi): menus, planos, etiquetas. Português simples, sem siglas. */
 export const MODULE_LABEL: Record<ModuleId, string> = {
-  crm: "CRM",
-  erp: "ERP",
+  crm: "Atendimento",
+  erp: "Gestão",
   pep: "Prontuário",
-  bi: "BI",
+  bi: "Indicadores",
+};
+
+/** Nome completo, para quando o módulo aparece sozinho (site, contratação): "Tropi Atendimento". */
+export const MODULE_FULL_NAME: Record<ModuleId, string> = {
+  crm: `${BRAND.name} ${MODULE_LABEL.crm}`,
+  erp: `${BRAND.name} ${MODULE_LABEL.erp}`,
+  pep: `${BRAND.name} ${MODULE_LABEL.pep}`,
+  bi: `${BRAND.name} ${MODULE_LABEL.bi}`,
 };
 
 /* ------------------------------- Leads ------------------------------- */

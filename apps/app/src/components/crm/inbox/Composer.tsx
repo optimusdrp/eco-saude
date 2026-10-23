@@ -213,7 +213,7 @@ export function Composer({
                 >
                   <span className="text-sm font-semibold">
                     /{q.shortcut} <span className="font-normal text-ink-soft">{q.title}</span>
-                    {q.approvedTemplate ? <span className="ml-1 rounded bg-pep-tint px-1 text-xs text-pep-ink">modelo</span> : null}
+                    {q.approvedTemplate ? <span className="ml-1 rounded bg-ok-tint px-1 text-xs text-ok-ink">modelo</span> : null}
                   </span>
                   <span className="line-clamp-1 text-xs text-ink-soft">{fillTemplate(q.body, vars)}</span>
                 </button>
@@ -330,8 +330,9 @@ export function Composer({
           type="submit"
           disabled={(!body.trim() && !(file && !internal)) || blocked || pending}
           className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-50 sm:min-h-10",
-            internal ? "bg-erp-ink" : "bg-crm hover:bg-[#5a37cf]",
+            "inline-flex min-h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold disabled:opacity-50 sm:min-h-10",
+            // "Enviar" é a ação principal da conversa: Sol com texto grafite (guia da marca)
+            internal ? "bg-erp-ink text-white" : "bg-sun text-ink hover:bg-sun-strong",
           )}
         >
           <Send className="size-4" aria-hidden />

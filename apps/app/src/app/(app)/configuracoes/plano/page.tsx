@@ -1,4 +1,4 @@
-import { MODULE_IDS, MODULE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@ecosaude/core";
+import { MODULE_FULL_NAME, MODULE_IDS, MODULE_LABEL, SUBSCRIPTION_STATUS_LABEL } from "@ecosaude/core";
 import { clinicTimeZone, CRM_FEATURE_LABEL, CRM_FEATURES } from "@ecosaude/core/crm";
 import { db, desc, eq, schema } from "@ecosaude/db";
 import { CheckCircle2, CircleSlash } from "lucide-react";
@@ -18,7 +18,7 @@ const fmtDate = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: clinicTim
  * PLANO E MÓDULOS (gestão, somente leitura)
  * O que a clínica contratou: módulos (CRM, ERP, Prontuário, BI), plano,
  * situação (teste, ativa...) e quais funcionalidades estão liberadas.
- * Mudanças de plano são feitas pela equipe EcoSaúde.
+ * Mudanças de plano são feitas pela equipe Tropi.
  */
 export default async function PlanPage() {
   const ctx = await requireCrm("config.plano");
@@ -32,7 +32,7 @@ export default async function PlanPage() {
 
   return (
     <>
-      <PageHeader title="Plano e módulos" description="O que a clínica tem hoje. Para contratar um módulo ou mudar de plano, fale com a equipe EcoSaúde." />
+      <PageHeader title="Plano e módulos" description="O que a clínica tem hoje. Para contratar um módulo ou mudar de plano, fale com a equipe Tropi." />
 
       <ul className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {MODULE_IDS.map((m) => {
@@ -60,7 +60,7 @@ export default async function PlanPage() {
                 </>
               ) : (
                 <Link href={`/modulos/${m}`} className="mt-2 inline-flex min-h-9 items-center text-sm font-semibold text-crm hover:underline">
-                  Conhecer o {MODULE_LABEL[m]}
+                  Conhecer o {MODULE_FULL_NAME[m]}
                 </Link>
               )}
             </li>
@@ -68,13 +68,13 @@ export default async function PlanPage() {
         })}
       </ul>
 
-      <Panel title="Funcionalidades do CRM" description="Liberadas pelo plano (ou por exceção combinada com a EcoSaúde).">
+      <Panel title="Funcionalidades do Atendimento" description="Liberadas pelo plano (ou por exceção combinada com a equipe Tropi).">
         <ul className="grid gap-2 sm:grid-cols-2">
           {Object.values(CRM_FEATURES).map((f) => {
             const on = ctx.has(f);
             return (
               <li key={f} className="flex items-center gap-2.5 rounded-xl bg-fog px-3 py-2.5">
-                {on ? <CheckCircle2 className="size-5 shrink-0 text-pep" aria-hidden /> : <CircleSlash className="size-5 shrink-0 text-ink-soft" aria-hidden />}
+                {on ? <CheckCircle2 className="size-5 shrink-0 text-ok" aria-hidden /> : <CircleSlash className="size-5 shrink-0 text-ink-soft" aria-hidden />}
                 <span className={cn("flex-1 text-sm font-semibold", !on && "text-ink-soft")}>{CRM_FEATURE_LABEL[f]}</span>
                 <span className="text-xs text-ink-soft">{on ? "liberada" : "fora do plano"}</span>
               </li>

@@ -58,6 +58,8 @@ export interface ThreadMessage {
   time: string;
   authorName: string | null;
   auto: boolean;
+  /** Respondida por alguém da equipe direto no celular da clínica (sem autor no Tropi) */
+  fromPhone: boolean;
   handledBy: string | null;
   error: string | null;
   /** Foto, áudio, vídeo ou documento (o arquivo abre pela rota autenticada /api/anexos/<id>) */

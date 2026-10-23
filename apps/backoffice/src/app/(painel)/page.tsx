@@ -103,7 +103,7 @@ export default async function DashboardPage() {
                     </Link>
                     <span className="h-2.5 overflow-hidden rounded-full bg-fog" aria-hidden>
                       <span
-                        className={stage === "perdido" ? "block h-full bg-ink/25" : closed ? "block h-full bg-pep" : "block h-full bg-crm"}
+                        className={stage === "perdido" ? "block h-full bg-ink/25" : closed ? "block h-full bg-ok" : "block h-full bg-crm"}
                         style={{ width: `${(n / funnelMax) * 100}%` }}
                       />
                     </span>

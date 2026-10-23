@@ -21,11 +21,14 @@ export function AddToWaitlist({
   professionals,
   contact,
   entry,
+  units = [],
 }: {
   professionals: Pro[];
   contact?: { id: string; name: string };
   /** Entrada existente: o botão vira "Editar" e mantém o lugar na fila */
-  entry?: { professionalId: string | null; period: string; notes: string | null };
+  entry?: { professionalId: string | null; period: string; notes: string | null; unitId?: string | null };
+  /** Unidades da clínica (a escolha só aparece com mais de uma) */
+  units?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -100,6 +103,16 @@ export function AddToWaitlist({
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
+            {units.length > 1 ? (
+              <SelectField label="Unidade" name="unitId" id="wl-unit" defaultValue={entry?.unitId ?? ""} hint="Onde o paciente aceita ser atendido." className="sm:col-span-2">
+                <option value="">Qualquer unidade</option>
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </SelectField>
+            ) : null}
             <SelectField label="Profissional" name="professionalId" id="wl-pro" defaultValue={entry?.professionalId ?? ""}>
               <option value="">Qualquer profissional</option>
               {professionals.map((p) => (

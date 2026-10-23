@@ -55,7 +55,7 @@ export default async function AiSettingsPage() {
     <>
       <PageHeader
         title="Inteligência artificial"
-        description="Escolha quais funcionalidades com IA a clínica usa. Tudo começa desligado, a IA só sugere (quem decide e envia é sempre a equipe) e, se ela falhar, o CRM segue pelas regras."
+        description="Escolha quais funcionalidades com IA a clínica usa. Tudo começa desligado, a IA só sugere (quem decide e envia é sempre a equipe) e, se ela falhar, o Tropi segue pelas regras."
       />
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-labelledby="ia-funcoes">
@@ -90,15 +90,15 @@ export default async function AiSettingsPage() {
           <Panel title="Situação da IA">
             <dl className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
-                {status.configured ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-pep" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-alert" aria-hidden />}
+                {status.configured ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-alert" aria-hidden />}
                 <div>
                   <dt className="font-semibold">{status.configured ? "Configurada no servidor" : status.keyWithoutPaidTier ? "Chave sem confirmação de conta paga" : "Sem chave no servidor"}</dt>
                   <dd className="text-ink-soft">
                     {status.configured
                       ? status.provider
                       : status.keyWithoutPaidTier
-                        ? "A chave existe, mas falta GEMINI_PAID_TIER=sim no servidor. Isso confirma que o projeto do Google tem faturamento ativo (na conta gratuita, o Google pode usar os dados para treinar). Até lá, só as regras do CRM."
-                        : "Falta a GEMINI_API_KEY no servidor. Mesmo ligadas, as funcionalidades usam só as regras do CRM até a chave ser configurada."}
+                        ? "A chave existe, mas falta GEMINI_PAID_TIER=sim no servidor. Isso confirma que o projeto do Google tem faturamento ativo (na conta gratuita, o Google pode usar os dados para treinar). Até lá, só as regras do Tropi."
+                        : "Falta a GEMINI_API_KEY no servidor. Mesmo ligadas, as funcionalidades usam só as regras do Tropi até a chave ser configurada."}
                   </dd>
                 </div>
               </div>
@@ -107,7 +107,7 @@ export default async function AiSettingsPage() {
                   <CircleAlert className="mt-0.5 size-4 shrink-0 text-alert" aria-hidden />
                   <div>
                     <dt className="font-semibold">Instável agora</dt>
-                    <dd className="text-ink-soft">A IA falhou várias vezes seguidas. Por alguns minutos o CRM usa o plano B direto, sem fazer ninguém esperar.</dd>
+                    <dd className="text-ink-soft">A IA falhou várias vezes seguidas. Por alguns minutos o Tropi usa o plano B direto, sem fazer ninguém esperar.</dd>
                   </div>
                 </div>
               ) : null}
@@ -147,7 +147,7 @@ export default async function AiSettingsPage() {
               <li>Regra pela frase: vai só a frase do gestor, os nomes da equipe e as etiquetas. Nenhum dado de paciente.</li>
               <li>Respostas sugeridas: vão só textos da EQUIPE já padronizados (nome do paciente trocado por variável, dados pessoais ocultados).</li>
               <li>Auditoria: vão as falas sem o nome do paciente (vira [paciente]) e sem horários; o tempo de resposta é medido no servidor.</li>
-              <li>Conversa com sinal de urgência não vai para a IA: rascunho, resumo e agendamento saem das regras do CRM.</li>
+              <li>Conversa com sinal de urgência não vai para a IA: rascunho, resumo e agendamento saem das regras do Tropi.</li>
               <li>Cada uso fica registrado (o que a IA sugeriu, o modelo, o tempo e o que a equipe fez).</li>
             </ul>
           </Panel>
@@ -157,11 +157,11 @@ export default async function AiSettingsPage() {
               {[
                 "Nada sai sozinho: a IA sugere e a equipe revisa e envia. Única exceção: o retorno personalizado, que só reescreve o texto aprovado dentro dos limites da clínica e só com a janela de 24h do WhatsApp aberta (fora dela vai o modelo aprovado).",
                 "Nada muda a ficha sozinho: dados e etiquetas tirados da conversa aparecem como sugestão e só entram com “Aplicar”.",
-                "Nada clínico: resposta com orientação de saúde é recusada; urgência segue as regras fixas do CRM.",
-                "Plano B: IA desligada, lenta ou instável, o CRM continua pelas regras e palavras-chave.",
+                "Nada clínico: resposta com orientação de saúde é recusada; urgência segue as regras fixas do Tropi.",
+                "Plano B: IA desligada, lenta ou instável, o Tropi continua pelas regras e palavras-chave.",
               ].map((t) => (
                 <li key={t} className="flex gap-2">
-                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-pep" aria-hidden />
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden />
                   {t}
                 </li>
               ))}

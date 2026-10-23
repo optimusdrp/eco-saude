@@ -60,7 +60,7 @@ function PromiseItem({ p, conversationId, canEdit }: { p: ThreadData["promises"]
         <span className={cn(p.overdue && "font-bold text-alert")}>{p.overdue ? `atrasada (era para ${p.dueLabel})` : `para ${p.dueLabel}`}</span>
         {p.assignee ? <span>com {p.assignee}</span> : null}
         {p.source ? (
-          <span className="inline-flex items-center gap-0.5" title={p.source === "ia" ? "Promessa entendida pela IA" : "Promessa lida pelas regras do CRM"}>
+          <span className="inline-flex items-center gap-0.5" title={p.source === "ia" ? "Promessa entendida pela IA" : "Promessa lida pelas regras do Tropi"}>
             {p.source === "ia" ? <Sparkles className="size-3" aria-hidden /> : <Bot className="size-3" aria-hidden />}
             {p.source === "ia" ? "IA" : "regras"}
           </span>
@@ -70,7 +70,7 @@ function PromiseItem({ p, conversationId, canEdit }: { p: ThreadData["promises"]
         <div className="mt-1.5 flex flex-wrap gap-1">
           <form action={doneAction}>
             <input type="hidden" name="id" value={p.id} />
-            <button type="submit" disabled={donePending} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-paper px-2.5 text-xs font-semibold text-pep-ink ring-1 ring-line hover:ring-pep disabled:opacity-50">
+            <button type="submit" disabled={donePending} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-paper px-2.5 text-xs font-semibold text-ok-ink ring-1 ring-line hover:ring-ok disabled:opacity-50">
               <Check className="size-3.5" aria-hidden /> Feito
             </button>
           </form>

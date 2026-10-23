@@ -60,7 +60,7 @@ export async function notePromiseCandidate(tx: Tx, c: Candidate): Promise<boolea
   if (!mayHavePromise(c.text)) return false;
 
   const conv = await tx.query.conversations.findFirst({ where: eq(schema.conversations.id, c.conversationId), columns: { urgent: true } });
-  const fallback = !aiConfigured() ? "IA não configurada no servidor" : conv?.urgent ? "conversa com sinal de urgência: fica no CRM, sem IA" : null;
+  const fallback = !aiConfigured() ? "IA não configurada no servidor" : conv?.urgent ? "conversa com sinal de urgência: fica no Tropi, sem IA" : null;
   if (!fallback) {
     await tx.insert(schema.aiPromises).values({ conversationId: c.conversationId, messageId: c.messageId, authorId: c.authorId, side: c.side });
     return true;

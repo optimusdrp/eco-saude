@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./schema-pep": "./src/schema-pep.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

@@ -42,7 +42,7 @@ export default async function AccountPage() {
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">
                     {describeDevice(s.userAgent)}
-                    {s.id === user.sessionId ? <span className="ml-1.5 rounded-full bg-pep-tint px-2 py-0.5 text-xs text-pep-ink">este aparelho</span> : null}
+                    {s.id === user.sessionId ? <span className="ml-1.5 rounded-full bg-ok-tint px-2 py-0.5 text-xs text-ok-ink">este aparelho</span> : null}
                   </p>
                   <p className="text-xs text-ink-soft">
                     {s.ip ? `IP ${s.ip}. ` : ""}Desde {fmt(s.createdAt)}, expira {fmt(s.expiresAt)}

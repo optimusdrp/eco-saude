@@ -5,7 +5,7 @@
  *  - ACESSO / PORTABILIDADE: uma cópia de tudo (já existia: "Exportar dados").
  *  - EXCLUSÃO: apagar os dados tratados com base no consentimento.
  *
- * Como o EcoSaúde faz a exclusão: ANONIMIZAÇÃO no CRM.
+ * Como o Tropi faz a exclusão: ANONIMIZAÇÃO no Tropi.
  *  - Tudo que identifica a pessoa (nome, telefone, e-mail, nascimento, convênio,
  *    textos das conversas, anotações, etiquetas, identificadores dos canais,
  *    leituras da IA) é apagado.

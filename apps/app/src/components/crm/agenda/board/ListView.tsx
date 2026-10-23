@@ -66,6 +66,7 @@ export function ListView({
                         </span>
                         <span className="block text-sm text-ink-soft">
                           {a.professionalName}
+                          {a.unitName || a.roomName ? `, ${[a.unitName, a.roomName].filter(Boolean).join(", ")}` : ""}
                           {a.service ? `, ${a.service}` : ""}
                           {a.notes ? `. ${a.notes}` : ""}
                         </span>

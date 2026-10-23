@@ -15,7 +15,7 @@ import { cn } from "@/components/ui/styles";
 import { setSentimentAction } from "@/modules/crm/actions/conversations";
 import type { ThreadData } from "./types";
 
-const TONE = (level: number) => (level >= 3 ? "bg-alert-tint text-alert" : level === 2 ? "bg-erp-tint text-erp-ink" : level === 1 ? "bg-fog text-ink" : "bg-pep-tint text-pep-ink");
+const TONE = (level: number) => (level >= 3 ? "bg-alert-tint text-alert" : level === 2 ? "bg-erp-tint text-erp-ink" : level === 1 ? "bg-fog text-ink" : "bg-ok-tint text-ok-ink");
 
 export function SentimentBox({ thread, canEdit }: { thread: ThreadData; canEdit: boolean }) {
   const router = useRouter();

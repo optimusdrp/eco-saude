@@ -10,10 +10,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type Variant = "primary" | "secondary" | "ghost" | "danger" | "dark";
+/**
+ * primary: índigo, para as ações comuns.
+ * sun: a AÇÃO PRINCIPAL da tela (guia Tropi: no máximo uma por tela), laranja com texto grafite.
+ */
+export type Variant = "primary" | "sun" | "secondary" | "ghost" | "danger" | "dark";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-crm text-white hover:bg-[#5a37cf]",
+  primary: "bg-crm text-white hover:bg-crm-strong",
+  sun: "bg-sun text-ink hover:bg-sun-strong",
   secondary: "bg-paper text-ink ring-1 ring-line hover:ring-ink/35",
   ghost: "text-ink-soft hover:bg-ink/5 hover:text-ink",
   danger: "bg-paper text-alert ring-1 ring-alert/40 hover:bg-alert-tint",

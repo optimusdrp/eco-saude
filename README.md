@@ -1,13 +1,19 @@
-# EcoSaúde: monorepo
+# Tropi: monorepo
 
-Site público, backoffice interno e ambiente da clínica (CRM hoje; ERP, Prontuário e BI nas
-próximas etapas) do ecossistema EcoSaúde.
+Site público, backoffice interno e ambiente da clínica do ecossistema **Tropi**
+(*Do primeiro contato ao retorno.*): Tropi Atendimento e Tropi Prontuário (fase 1) hoje;
+Tropi Gestão e Tropi Indicadores nas próximas etapas.
+
+> O projeto se chamava EcoSaúde. Os nomes **internos** continuam iguais de propósito
+> (pacotes `@ecosaude/*`, papel `ecosaude_tenant` do banco, rotas `/crm`, ids `crm/erp/pep/bi`):
+> o usuário não vê nenhum deles, e trocá-los exigiria migração do banco e mudança de
+> configuração na Vercel sem ganho para a marca. Veja "Identidade Tropi" abaixo.
 
 ```
 ecosaude/
 ├── apps/
 │   ├── site/          Landing page pública (Next.js)                  -> porta 3000
-│   ├── backoffice/    Gestão interna da equipe EcoSaúde (Next.js)     -> porta 3001
+│   ├── backoffice/    Gestão interna da equipe Tropi (Next.js)        -> porta 3001
 │   └── app/           Ambiente da clínica: CRM e, depois, os demais   -> porta 3002
 ├── packages/
 │   ├── core/          Regras do negócio: status, perfis, permissões, validações (zod), regras do CRM
@@ -117,7 +123,8 @@ entra no ambiente da clínica e cadastra a própria equipe em **Ajustes > Equipe
 |---|---|
 | `pnpm dev` | Roda site e backoffice juntos |
 | `pnpm dev:site` / `pnpm dev:backoffice` / `pnpm dev:app` | Roda só um deles |
-| `pnpm --filter @ecosaude/core test` / `pnpm --filter @ecosaude/channels test` | Testes das regras do CRM e da leitura dos canais |
+| `pnpm test` | Testes de unidade (regras do CRM/Prontuário e leitura dos canais) |
+| `pnpm test:e2e:prepare` / `pnpm test:e2e` | Testes de ponta a ponta no navegador (veja "Testes automáticos") |
 | `pnpm typecheck` / `pnpm lint` / `pnpm build` | Verificações em todos os pacotes |
 | `pnpm db:generate` | Gera migração SQL depois de alterar `packages/db/src/schema.ts` |
 | `pnpm db:migrate` | Aplica migrações pendentes |
@@ -731,7 +738,7 @@ clínica, e a tela já orienta a pessoa a pedir a senha à gestão.
 | --- | --- |
 | `EMAIL_DRIVER` | `ses` (Amazon SES, recomendado), `resend` ou `arquivo` (só desenvolvimento: grava em `apps/app/.data/emails`) |
 | `EMAIL_FALLBACK` | Provedor reserva (o outro dos dois acima) |
-| `EMAIL_FROM` | Remetente, ex.: `EcoSaúde <nao-responda@seudominio.com.br>` (domínio verificado no provedor) |
+| `EMAIL_FROM` | Remetente, ex.: `Tropi <nao-responda@seudominio.com.br>` (domínio verificado no provedor) |
 | `APP_URL` | Endereço público do CRM, com `https://` (obrigatório em produção) |
 | `SES_REGION` | Padrão `sa-east-1` (São Paulo) |
 | `RESEND_API_KEY` | Chave do Resend, se for usá-lo |
@@ -757,6 +764,60 @@ Código:
 - telas em `app/(auth)/login/esqueci` e `app/(auth)/login/nova-senha`;
 - migração `0028`: tabelas `password_resets` e `auth_throttle`. Só o login acessa essas tabelas;
   o papel da clínica não as enxerga.
+
+## Identidade Tropi
+
+Baseada no guia de marca Tropi, com duas mudanças pedidas: **o símbolo não é uma folha** e
+**a cor principal não é verde**.
+
+- **Nome:** "Tropi" no texto, "tropi" (minúsculas) só no logotipo, nunca "TROPI". Vem de
+  *tropismo*, o movimento em direção à luz.
+- **Slogan:** "Do primeiro contato ao retorno." É a jornada inteira do paciente, que atravessa
+  os quatro módulos. Fica em `BRAND.tagline` (`packages/core/src/index.ts`): trocar lá muda o
+  site, o login e os metadados.
+- **Módulos** (nome + função, sem siglas):
+
+  | Interno | Nome curto | Nome completo |
+  | --- | --- | --- |
+  | crm | Atendimento | Tropi Atendimento |
+  | erp | Gestão | Tropi Gestão |
+  | pep | Prontuário | Tropi Prontuário |
+  | bi | Indicadores | Tropi Indicadores |
+
+  Os nomes ficam em `MODULE_LABEL` e `MODULE_FULL_NAME` (`packages/core`).
+- **Símbolo:** monograma "t" cuja barra se curva para cima, como uma seta, em direção ao sol.
+  O traço é índigo (índigo claro sobre fundo escuro) e o sol é sempre laranja. Abaixo de 80 px de largura, use
+  só o símbolo. Arquivos: os componentes `LogoMark`/`Logo` de cada app e os `icon.svg`.
+- **Cores** (`packages/tokens/theme.css`):
+
+  | Cor | Hex | Uso |
+  | --- | --- | --- |
+  | Índigo profundo | `#2B2A4C` | barra lateral, fundos escuros, texto da marca |
+  | Índigo vivo | `#4B46B8` | links, seleção, botões comuns |
+  | Névoa | `#ECEBF7` | superfícies suaves |
+  | Sol | `#FF8A3D` | ação principal da tela, sempre com texto grafite (branco sobre o Sol não tem contraste) |
+  | Grafite | `#1D1C33` | texto |
+  | Pedra | `#5B5A74` | texto de apoio |
+  | Papel | `#F7F7FA` | fundo |
+
+  Cores dos módulos: âmbar (Gestão), azul (Prontuário) e orquídea (Indicadores). O verde
+  aparece só como sinal de "deu certo" (token `ok`), nunca como cor da marca. Todos os pares
+  de texto e fundo passam no contraste AA (4,5:1).
+- **Botão Sol (variante `sun`):** é a ação principal, no máximo uma por tela. Hoje está em:
+  Entrar, Enviar da conversa, telas de senha, "Pedir demonstração" e envio do contato do site.
+  As demais ações usam índigo.
+- **Tipografia:** Bricolage Grotesque nos títulos e Instrument Sans na interface
+  (`@fontsource-variable`, servidas pelo próprio app, sem depender do Google Fonts).
+- **Vocabulário:** na tela da clínica, "interessado" no lugar de "lead" e "paciente" no lugar
+  de "cliente". Os valores internos (`lead`, `paciente`) não mudaram.
+- **Verificação em duas etapas:** novas ativações aparecem no aplicativo autenticador como
+  "Tropi". Quem ativou antes continua vendo "EcoSaúde Clínica" (o código é o mesmo, e a tela
+  avisa). Para trocar o nome no aplicativo, basta desativar e ativar de novo.
+
+**Antes do lançamento (fora do código):**
+- busca de anterioridade da marca no INPI, nas classes 9, 35, 42 e 44;
+- confirmar o domínio e os perfis sociais;
+- pedir a um designer a vetorização final do logotipo e o kit (foto de perfil, capa, assinatura).
 
 ### Fuso horário por clínica
 
@@ -980,6 +1041,77 @@ Endereço: `/crm/tarefas`.
 - **Ações em lote:** concluir/reabrir, adiar, trocar responsável e excluir.
 - Visão, escopo e densidade ficam salvos no navegador.
 
+### Unidades de atendimento e consultórios
+
+Ajustes > **Unidades e consultórios**. Uma clínica tem uma ou mais **unidades** (endereço, telefone,
+CNES) e cada unidade tem os seus **consultórios e salas** (consultório, procedimentos, exames,
+triagem). Toda clínica nasce com uma unidade principal (criada sozinha); quem tem um endereço só
+não vê escolha de unidade em nenhuma tela.
+
+- **Semana do profissional** (Clínica e profissionais): em cada período do dia escolhe-se a unidade
+  e, se quiser, um consultório fixo (ex.: seg a sex no Moinhos, Consultório 1; sábado no Centro,
+  Sala 1). O ajuste avisa consultório fixo dividido com outro profissional e troca de unidade com
+  menos de 30 min entre períodos; recusa consultório de outra unidade ou desativado.
+- **Ao marcar**, a consulta herda a unidade do período e o consultório fixo; sem fixo (ou ocupado),
+  o Tropi escolhe um consultório livre da unidade. Todos ocupados: a tela avisa antes de marcar.
+  O **banco impede** duas consultas no mesmo consultório ao mesmo tempo e consultório de outra
+  unidade (migração 0032). Trocar o consultório: Agenda > consulta > Editar detalhes.
+- **Agenda, Hoje e Consultório** filtram por unidade. Ajustes > Equipe > Acesso > "Unidades em que
+  trabalha" restringe a pessoa (recepção do Centro vê só o Centro, mesmo mexendo na URL).
+- Horários livres mostram a unidade; a **lista de espera** aceita "só na unidade X".
+- **Horários livres consideram os consultórios.** Um horário só aparece se, além do profissional,
+  houver consultório livre na unidade daquele período. Cada horário mostra a **sala sugerida**,
+  que é a mesma que a consulta recebe ao marcar (sala fixa do período se livre; senão, o primeiro
+  consultório livre na ordem do cadastro).
+  - Vale para a tela de agendar e de remarcar, os horários sugeridos em Conversas, o "agendar pelo
+    pedido" e o rascunho com IA, os encaixes da lista de espera e o resumo do dia.
+  - Unidade sem consultório cadastrado (ou só com sala de triagem): nada muda, não há controle de sala.
+  - Ao remarcar, a sala da própria consulta conta como livre.
+  - A grade da Agenda continua mostrando o horário vago do profissional; se não houver sala, a
+    marcação avisa antes de confirmar (é possível marcar sem consultório e definir depois).
+  - Regra pura em `packages/core/src/crm/units.ts` (`roomForSlot`, com testes em
+    `rooms-slots.test.ts`); no servidor, `roomSlotBase` e `roomFilter` em
+    `apps/app/src/modules/crm/units.ts`; teste de ponta a ponta em `e2e/horarios-consultorios.spec.ts`.
+- **Mensagens** ao paciente ganham `{{local}}` (", na Unidade Centro (endereço)", só com mais de uma
+  unidade), `{{endereco}}` e `{{consultorio}}`. Os textos padrão de agendamento, confirmação,
+  lembrete, remarcação e oferta já usam `{{local}}`.
+- **Prontuário**: o atendimento guarda a unidade; receita e atestado saem com o endereço, o telefone
+  e o CNES da unidade. O Consultório mostra o mapa dos consultórios agora (quem está em cada sala
+  e até quando).
+- Unidade e consultório não são apagados, só desativados (exige não ter consultas futuras ali).
+
+#### Horário de funcionamento, feriados e fechamentos
+
+Em Ajustes > **Unidades e consultórios**.
+
+- **Horário de funcionamento** (botão "Horário" em cada unidade): dias e até 3 períodos por dia
+  (intervalo de almoço = dois períodos). A **unidade principal** tem o horário da clínica; as outras
+  usam o da principal ("Mesmo horário da unidade principal") até ganharem um próprio.
+  - Serve para a resposta automática **Fora do horário** e para **avisar** ao salvar a semana de um
+    profissional que atende fora do funcionamento da unidade. **Não esconde horários** dos
+    profissionais: a semana de cada um continua mandando (decisão de 22/10/2026).
+  - O horário que existia na automação "Fora do horário" virou o horário da unidade principal
+    (migração 0034). A automação não tem mais horário próprio.
+- **Feriados e fechamentos**: da clínica inteira ou de uma unidade, de um dia ou um período
+  (feriado, recesso, outro).
+  - **Trazer feriados nacionais**: os 10 nacionais do ano (inclusive Sexta-feira Santa e 20 de
+    novembro), sem duplicar ao trazer de novo. Carnaval e Corpus Christi (ponto facultativo) só com
+    a caixa marcada. Estaduais e municipais: "Novo fechamento".
+  - Efeito: os horários da unidade fechada **somem** de todas as buscas de horário livre (agendar,
+    remarcar, Conversas, IA, lista de espera, resumo do dia); a Agenda e o Hoje mostram
+    "Fechado: motivo"; a marcação manual avisa antes de confirmar.
+  - Consultas já marcadas **não são canceladas**: ao salvar, a tela diz quantas há no período para
+    a recepção remarcar e avisar os pacientes.
+- **Resposta "fora do horário"**: o WhatsApp é um número só para a clínica, então vale o horário da
+  **unidade do paciente** (a da próxima consulta; senão a da última; senão a principal). Com feriado
+  ou fechamento, a resposta diz "(hoje estamos fechados: motivo)". A variável
+  `{{horario_atendimento}}` continua sendo o horário, então textos personalizados seguem certos.
+- A **auditoria de atendimento** (IA) usa o horário da unidade principal e os fechamentos da
+  clínica para não cobrar demora quando a clínica estava fechada.
+- Regras puras em `packages/core/src/crm/opening.ts` (com testes); servidor em
+  `apps/app/src/modules/crm/opening.ts` e `actions/opening.ts`; tela em
+  `configuracoes/unidades/OpeningForms.tsx`; teste de ponta a ponta em `e2e/funcionamento.spec.ts`.
+
 ### Agenda
 
 Endereço: `/crm/agenda?data=AAAA-MM-DD&visao=dia|semana|lista` (e `&consulta=<id>` abre uma consulta direto).
@@ -1071,39 +1203,307 @@ IDs gerados no aparelho (`client_id`) tornam reenvios seguros (não duplicam), e
 cadastros e consultas detecta edição simultânea ("alterado por outra pessoa"). A fila de envio
 já separa gravar de enviar.
 
+## 5b. Tropi Prontuário (fase 1)
+
+Ligado quando a clínica tem a contratação do módulo **Prontuário** (backoffice > clínica >
+contratações). Menu **Prontuário** no ambiente da clínica; com o Atendimento contratado, a
+consulta da agenda ganha o botão **Abrir atendimento no prontuário**.
+
+| Tela | O que faz |
+|---|---|
+| `/prontuario` | Consultas de hoje do profissional, atendimentos não finalizados, busca de paciente e cadastro rápido |
+| `/prontuario/pacientes/<id>` | Resumo clínico (alergias, medicamentos, problemas, antecedentes) e linha do tempo com adendos e documentos |
+| `/prontuario/atendimentos/<id>` | Modelo da especialidade, sinais vitais com IMC e alertas, CID-10, conduta, retorno, documentos, finalizar |
+| `/prontuario/modelos` | Modelos de anamnese/evolução (os do Tropi vêm prontos: clínica geral, primeira consulta e retorno) |
+| `/prontuario/ajustes` | Regra de sigilo, cabeçalho dos documentos, profissionais com cadastro incompleto e acessos sensíveis |
+| `/documento` | **Pública**: farmácia, escola ou empresa confere o documento pelo código impresso |
+
+**Regras garantidas pelo banco (migração 0030)**
+- Atendimento finalizado não aceita alteração nem exclusão (política restritiva no RLS);
+  correção é por **adendo**, com autor e data. Adendos e o registro de acessos só aceitam inclusão.
+- Atendimento e documento recebem hash SHA-256 do conteúdo; a verificação pública recalcula o
+  hash e acusa divergência se o registro foi mexido.
+- Paciente com prontuário não é apagado. No pedido de exclusão (LGPD), a ficha do Atendimento é
+  anonimizada e a identificação mínima (nome, nascimento, sexo, CPF) fica guardada no prontuário
+  (CFM 1.821/2007 e Lei 13.787/2018: 20 anos; LGPD art. 16, I).
+- CID-10 completo (DATASUS, revisão 2008) carregado na própria migração.
+
+**Consultório (`/consultorio`).** Primeira tela do profissional de saúde: pacientes do dia na
+ordem, situação de cada um (aguardando, na recepção, triagem feita, em atendimento, finalizado,
+faltou), tempo de espera, **próximo paciente** em destaque (urgência da triagem primeiro),
+atendimentos esquecidos em rascunho. Atualiza sozinho a cada 30 s. A **triagem** (queixa, sinais
+vitais, prioridade) marca a chegada e os sinais vitais entram no atendimento.
+
+**Quem vê o quê (LGPD art. 6º, III e art. 11; sigilo profissional).** Conteúdo clínico (atendimento
+completo, atender, acesso de emergência) só vale para **profissional de saúde**: quem tem registro
+em conselho no próprio acesso (Ajustes > Equipe > Acesso > Profissional de saúde) ou está ligado a
+um profissional da agenda com conselho. O profissional de saúde recebe esse pacote em qualquer
+cargo (ex.: gestora que também é médica); sem registro, nem liberação individual abre o conteúdo
+clínico. A gestão pode liberar partes para outras pessoas, cada uma registrada ao abrir a ficha:
+
+| Permissão | Mostra |
+|---|---|
+| Consultório | Pacientes do dia e a situação de cada um, sem dado clínico |
+| Resumo de segurança | Alergias, medicamentos em uso, problemas ativos |
+| Triagem e sinais vitais | Registrar e ver a pré-consulta |
+| Documentos emitidos | Ver e reimprimir receitas, atestados e declarações |
+| Atendimento completo | Tudo (só profissional de saúde) |
+
+Prontuário > Ajustes e acessos mostra **quem vê o quê** e os acessos sensíveis.
+
+**Sigilo.** Padrão: qualquer perfil com "Ler prontuários" abre. Com **Só quem atendeu**, os demais
+pacientes pedem **acesso de emergência** (justificativa obrigatória, vale 12 horas, aparece para a
+gestão). Os perfis do sistema: Profissional (com conselho) tem tudo de clínico; Gestão vê o
+Consultório, mexe em modelos e ajustes e entrega a cópia do prontuário, **sem** ler o conteúdo
+clínico; Recepção não vê prontuário. Modelo de cargo "Enfermagem / técnico": consultório, triagem,
+resumo e documentos (com o COREN no acesso, também lê e registra).
+
+**Documentos** (receita, receita de controle especial em 2 vias, atestado, declaração de
+comparecimento, pedido de exames, encaminhamento): PDF A4 com cabeçalho da clínica, registro no
+conselho do profissional (obrigatório: Ajustes > Clínica > Profissionais) e código de
+verificação. Na fase 1 o PDF é **impresso e assinado à mão**; a assinatura digital ICP-Brasil é
+a fase 3. Receitas A e B (notificação) usam o talonário oficial e não são emitidas. O CID só vai
+no atestado com autorização do paciente (CFM 1.658/2002). Na receita, medicamento parecido com
+uma alergia registrada exige confirmação explícita.
+
+**Configure `APP_URL`** com o endereço público (https): ele vai impresso no rodapé dos documentos
+para a verificação. Sem ele, o PDF usa o endereço pelo qual o sistema foi acessado.
+
+Próximas fases: odontograma, psicologia/nutrição, dermatologia/estética com fotos (fase 2);
+ICP-Brasil e prescrição integrada (fase 3); FHIR/RNDS, importação e IA opcional (fase 4).
+
+---
+
+### "Chegou" no Consultório (clínica sem recepção)
+
+Na clínica sem recepção, o próprio profissional marca que o paciente chegou, sem sair do Consultório.
+
+- **Onde:** botão **Chegou** na linha do paciente e no cartão "Próximo horário". Aparece só para consultas de **hoje** ainda **aguardando chegada**.
+- **Quem:** quem vê o Consultório e tem **"Marcar e remarcar consultas"** (`agenda.editar`), a mesma permissão que a agenda pede para marcar comparecimento. Profissional e gestão já têm por padrão; tirar essa permissão de alguém (Ajustes > Equipe > Acesso) esconde o botão.
+- **Efeito:** o mesmo da agenda: consulta "compareceu", hora de chegada (que mede a espera e a duração real), registro na linha do tempo do paciente e, com o Atendimento contratado, as automações da clínica (ex.: pesquisa de satisfação). Funciona também em clínica só com o Prontuário.
+- **Travas iguais às da agenda:**
+  - só a partir de 30 minutos antes do horário; antes disso o botão aparece desabilitado com "a partir das HH:MM";
+  - se outra pessoa mudou a consulta enquanto a tela estava aberta, nada é gravado e a tela avisa;
+  - pessoa restrita a unidades só marca chegada nas unidades dela.
+- **Desfazer:** para um toque errado, enquanto não houver triagem nem atendimento. Depois disso, o caminho é a agenda.
+- A triagem continua marcando a chegada sozinha.
+
+**Arquivos:** regra pura em `packages/core/src/crm/arrival.ts` (com testes); ação `consultorioArrivalAction` em `apps/app/src/modules/pep/actions.ts`; botão `ArrivalButton` em `components/pep/ConsultorioTools.tsx`; teste de ponta a ponta em `apps/app/e2e/chegada.spec.ts`.
+
+### Avisos ativos: acesso de emergência e triagem urgente (sino)
+
+Dois eventos não podem ficar só no registro: a gestão precisa saber **na hora** de um acesso de emergência, e o profissional, de uma triagem urgente.
+
+**Sino (barra superior, em todas as telas):**
+- Número vermelho com os avisos não lidos; pulsa quando há aviso urgente.
+- Atualiza sozinho a cada 20 segundos (com a aba aberta) e quando a aba volta a ficar visível.
+- Clicar no aviso marca como lido e abre a tela que resolve. "Marcar todos como lidos" limpa o número.
+- Celular: o painel ocupa a largura da tela.
+
+**Acesso de emergência ao prontuário:**
+- Quem tem a gestão do prontuário (permissão "Modelos, ajustes e registro de acessos", `prontuario.modelos`) recebe no sino: quem acessou, qual paciente e o motivo. Quem fez o acesso não é avisado.
+- O aviso é gravado **na mesma transação** do acesso: se não der para avisar, o acesso também não acontece.
+- **E-mail opcional** (Prontuário > Ajustes > "Avisar também por e-mail"): diz só que houve um acesso e traz o link. **Não leva nome do paciente, quem acessou nem o motivo**, porque e-mail não é canal seguro para dado de saúde. Precisa do envio de e-mail configurado (`EMAIL_DRIVER`, veja "Esqueci minha senha").
+- **Prova de que a gestão foi avisada:** em Prontuário > Ajustes > Acessos sensíveis, cada acesso de emergência mostra quem foi avisado e quando leu.
+
+**Triagem urgente:**
+- Quando a triagem **passa a ser urgente** (nova ou corrigida), o profissional da consulta recebe o aviso no sino com o horário e a queixa. Corrigir uma triagem que já era urgente não repete o aviso.
+- Só é avisado o profissional que tem acesso ligado (Ajustes > Clínica > Profissionais). Sem acesso ligado, continua valendo o destaque no Consultório.
+- **Consultório:** faixa vermelha "Paciente com triagem urgente esperando" e a linha do paciente destacada até começar o atendimento.
+- **Som opcional, por aparelho:** "Ligar som para triagem urgente". Toca dois bipes quando aparece um paciente urgente novo. O navegador só libera o som depois de um clique na página; sem isso, valem a faixa e o sino.
+
+**LGPD e registro:**
+- O registro permanente continua sendo a auditoria do prontuário (`pep_audit`). Os avisos (`user_notices`) são a entrega e a leitura.
+- Avisos com mais de 90 dias são apagados pela rotina. A exclusão a pedido do paciente apaga os avisos que citam o nome dele.
+- Cada pessoa só lê e marca os próprios avisos; o banco isola as clínicas (RLS) e não deixa reescrever o texto de um aviso (só marcar como lido).
+
+**Banco:** migração 0033 (`user_notices` e `pep_settings.emergency_email`).
+
+**Arquivos:**
+- regras puras (destinatários, textos e e-mail sem dado do paciente) em `packages/core/src/pep/notices.ts`, com testes;
+- gravação, leitura, e-mail e limpeza em `apps/app/src/modules/notices.ts`;
+- rota do sino em `apps/app/src/app/api/avisos/route.ts`;
+- sino em `components/shell/NoticeBell.tsx`; faixa e som em `components/pep/ConsultorioTools.tsx` (`UrgentWatch`);
+- teste de ponta a ponta em `apps/app/e2e/avisos.spec.ts`.
+
 ## 6. Ligando os canais de verdade
 
-Segredos ficam **só** nas variáveis de ambiente (Vercel ou AWS Secrets Manager), nunca no banco.
-Cada clínica informa em **Ajustes > Canais** o identificador da própria conta (número, página, bot):
-é por ele que o webhook descobre de qual clínica é a mensagem. O modo **Real** só fica disponível
-quando o servidor tem a credencial do canal.
+Cada clínica conecta os **próprios** canais em **Ajustes > Canais**. O Tropi confere a conexão
+com o provedor **antes** de o canal virar "real": não existe mais o modo real digitado à mão.
+Enquanto o canal não está conectado, ele funciona em simulação.
 
-| Canal | Variáveis | URL do webhook |
-|---|---|---|
-| WhatsApp (Cloud API) | `WHATSAPP_ACCESS_TOKEN`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | `https://SEU-DOMINIO/api/webhooks/whatsapp` |
-| Instagram | `INSTAGRAM_ACCESS_TOKEN`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | `https://SEU-DOMINIO/api/webhooks/instagram` |
-| Messenger | `MESSENGER_PAGE_TOKEN`, `META_APP_SECRET`, `META_VERIFY_TOKEN` | `https://SEU-DOMINIO/api/webhooks/facebook` |
-| Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | `https://SEU-DOMINIO/api/webhooks/telegram?conta=UsuarioDoBot` |
+Onde fica cada informação:
 
-Passo a passo (Meta):
+- **Tokens da clínica** (página, Instagram, bot, Cloud API direto): ficam criptografados
+  (AES-256-GCM) em `channel_connections.credentials_enc` e nunca voltam para a tela.
+- **Segredos do servidor**: ficam nas variáveis de ambiente (ver `.env.example`, seção Canais).
 
-1. Crie um app tipo **Empresa** em developers.facebook.com e adicione WhatsApp, Messenger e/ou Instagram.
-2. Gere um token de **usuário do sistema** (não expira) e coloque nas variáveis acima.
-3. Em Webhooks, informe a URL, o `META_VERIFY_TOKEN` e assine o campo `messages`.
-   O EcoSaúde confere a assinatura `X-Hub-Signature-256` de cada chamada com o `META_APP_SECRET`.
-4. Cadastre e aprove na Meta os **modelos** usados fora da janela de 24h (confirmação, retorno,
-   retomada de conversa) e marque as respostas correspondentes como "modelo aprovado".
-5. Em Ajustes > Canais, informe o ID da conta e troque o modo para **Real**.
+| Canal | Formas de conectar | Custo | Webhook |
+|---|---|---|---|
+| WhatsApp | celular por **QR code** ou **código de 8 letras** (Evolution) | gratuito (a Evolution é código aberto; você paga só o servidor) | a Evolution chama `/api/webhooks/evolution` |
+| WhatsApp | **API oficial via Evolution** (Cloud API) | a Meta cobra por modelo enviado; responder dentro de 24h é grátis | Meta → `https://SUA-EVOLUTION/webhook/meta` → Tropi |
+| WhatsApp | **API oficial direto na Meta** | igual à anterior | `/api/webhooks/whatsapp` |
+| Instagram | **login do Instagram** (sem página) ou **página do Facebook** | gratuito | `/api/webhooks/instagram` |
+| Messenger | **página do Facebook** | gratuito | `/api/webhooks/facebook` |
+| Telegram | **bot** do @BotFather | gratuito | registrado sozinho pelo Tropi |
 
-Telegram: crie o bot no @BotFather e registre o webhook com
-`https://api.telegram.org/bot<TOKEN>/setWebhook?url=<URL acima>&secret_token=<TELEGRAM_WEBHOOK_SECRET>`.
+### WhatsApp pela Evolution API
 
-> **Ponto de atenção para muitas clínicas:** na Meta, o caminho é a EcoSaúde virar
-> **Tech Provider** e usar o *Embedded Signup*: um token do app atende os números de todas as
-> clínicas (cada uma só informa o seu ID). No Telegram cada clínica tem o próprio bot, então o
-> próximo passo é guardar o token **por clínica** num cofre (AWS Secrets Manager), em vez de uma
-> única variável de ambiente. Os adaptadores de envio para a Graph API foram escritos conforme a
-> documentação, mas ainda não foram testados contra a API real.
+A [Evolution API](https://docs.evolutionfoundation.com.br/evolution-api) é um servidor à parte,
+que a Tropi hospeda e todas as clínicas usam. Cada clínica ganha uma **instância** própria, com um
+nome que não revela a clínica.
+
+1. **Suba a Evolution** num servidor sempre ligado. A Vercel não serve: o WhatsApp do celular
+   precisa de conexão aberta o tempo todo.
+   - O projeto traz `infra/evolution` com Docker Compose (Evolution v2.3.7, PostgreSQL, Redis e
+     HTTPS automático pelo Caddy).
+   - Sugestão de servidor: AWS Lightsail ou EC2 em São Paulo.
+   - Copie `.env.example` para `.env`, preencha, aponte o DNS e rode `docker compose up -d`.
+   - O painel `/manager` fica bloqueado na internet.
+2. **No servidor do Tropi**, preencha:
+   - `EVOLUTION_API_URL=https://evolution.suaempresa.com.br`;
+   - `EVOLUTION_API_KEY`, a mesma chave da Evolution;
+   - `EVOLUTION_WEBHOOK_SECRET`;
+   - `APP_URL` (https). Se a Evolution enxerga o Tropi por outro endereço (rede interna na AWS,
+     piloto em Docker no seu computador), use `EVOLUTION_WEBHOOK_BASE_URL`.
+3. **Em Ajustes > Canais > WhatsApp**, escolha "WhatsApp do celular" e depois **QR code** ou
+   **Código no celular**. O Tropi cria a instância já com o webhook, ignorando grupos e sem
+   marcar mensagens como lidas, mostra o QR (renovado sozinho) ou o código e acompanha até o
+   celular confirmar.
+4. **API oficial via Evolution**: cole o token permanente, o Phone number ID e o WABA ID.
+   - O token vai **só** para a Evolution; o Tropi não o guarda.
+   - No app da Meta, o webhook aponta para `https://SUA-EVOLUTION/webhook/meta`, com o token
+     `WA_BUSINESS_TOKEN_WEBHOOK`.
+
+**Proteções da integração:**
+
+- **Webhook autenticado:** a Evolution não assina o webhook. Por isso, o Tropi configura em cada
+  instância um cabeçalho secreto (`x-tropi-evolution`), derivado por HMAC do
+  `EVOLUTION_WEBHOOK_SECRET` com o nome da instância, e confere em tempo constante a cada chamada.
+- **Arquivos fora do webhook:** os arquivos não vêm no webhook (`base64: false`), para o webhook
+  ficar leve. O Tropi pede cada arquivo depois, com `getBase64FromMediaMessage`, com o mesmo
+  limite de 16 MB e a mesma checagem pelo conteúdo dos anexos. Falha de rede ao baixar tenta de
+  novo; só desiste quando a Evolution diz que a mensagem não existe.
+- **Quando a conexão cai:** o Tropi
+  - mostra um aviso vermelho em todas as telas, com o motivo (saiu pelo celular, número
+    bloqueado, QR code expirado);
+  - segura as mensagens na fila (nada falha);
+  - envia tudo **na hora** em que reconectar, sem esperar a rotina de 10 minutos.
+- **O celular sem internet não derruba a conexão:** o WhatsApp funciona com vários aparelhos, e a
+  Evolution segue conectada mesmo com o celular desligado (até 14 dias). O que derruba é sair pelo
+  celular, o WhatsApp bloquear o número ou o servidor da Evolution parar.
+- **Código no celular:** a Evolution gera um código novo a cada QR (~30 s). A tela mostra sempre o
+  mais recente.
+- **Número sem WhatsApp:** a mensagem falha com "Este número não tem WhatsApp".
+- **Contas sem telefone (LID):** o WhatsApp vem trocando parte dos números por um identificador
+  sem telefone (LID). O Tropi usa o número quando a Evolution o informa e, se não, responde pelo
+  LID.
+- **Grupos, status e canais** não entram no atendimento.
+- **Respostas dadas direto no celular da clínica:** quando alguém da equipe responde o paciente
+  pelo próprio WhatsApp do celular, a Evolution avisa (`key.fromMe`) e o Tropi registra a mensagem
+  em Conversas com a marca **"Enviada pelo celular"**.
+  - Conta como resposta da equipe: a conversa sai de "esperando resposta" e a jornada avança.
+  - Não dispara automações e não abre nem estende a janela de 24h (que depende só do paciente).
+  - Só entra para **contatos que já existem** no Tropi; mensagem para outro número (pessoal) é
+    ignorada e não cria contato.
+  - Não duplica: o aviso repetido é descartado pelo ID externo, e a cópia de uma mensagem que o
+    próprio Tropi enviou é reconhecida pelo ID ou, se chegar antes do ID ser gravado, pelo mesmo
+    texto nos últimos 10 minutos.
+  - Não dá para saber **quem** respondeu pelo celular: essas mensagens ficam sem autor e não entram
+    na auditoria por pessoa nem nas sugestões de respostas rápidas.
+  - Vale para o modo QR code / código. Na API oficial ainda não: o número com coexistência
+    (app WhatsApp Business + API) manda essas cópias em outro formato, que o Tropi não lê.
+
+#### Ritmo de envio do WhatsApp do celular
+
+Um número que dispara muitas mensagens seguidas corre risco de bloqueio. No WhatsApp do celular
+(QR code ou código), o Tropi espaça as mensagens **automáticas**: confirmações, lembretes,
+retornos em lote, regras e respostas automáticas.
+
+- **A resposta digitada pela equipe sai na hora**, mesmo com fila. Ela conta nos limites, porque
+  o WhatsApp enxerga o número inteiro, mas nunca fica presa neles.
+- **Ajustes > Canais > WhatsApp > Ritmo das mensagens automáticas**, com três sugestões:
+
+  | Sugestão | Para quem | Intervalo | Por minuto | Por hora | 200 confirmações |
+  |---|---|---|---|---|---|
+  | Número novo (cauteloso), o padrão | número recém-conectado | 4 a 12 s | 6 | 60 | cerca de 3h05 |
+  | Número aquecido | número que conversa há meses, sem bloqueios | 4 a 12 s | 8 | 120 | cerca de 1h10 |
+  | Máxima cautela | depois de um aviso ou bloqueio temporário | 8 a 20 s | 4 | 40 | cerca de 4h10 |
+
+  Há também a opção **Personalizado**, com faixas seguras: intervalo de 2 s ou mais e até 20 por
+  minuto.
+- **Venceu na fila:** confirmação ou lembrete de consulta que já começou, e oferta de vaga que
+  expirou, **não saem**. Ficam "Não enviada: venceu na fila" e aparecem na tela de Canais.
+- **Fila na tela de Canais:** quantas mensagens aguardam, quantas saíram na última hora, a
+  previsão para a fila acabar e o motivo da espera (limite por minuto ou por hora).
+- **Quem está conversando agora passa na frente:** a automática para um paciente que escreveu nos
+  últimos 30 minutos, como a resposta de fora do horário, sai antes da fila de lembretes.
+- **Como funciona por dentro:** nenhuma chamada fica esperando.
+  - A vez do próximo envio é marcada no banco (`channel_connections.pace_next_at`) com uma
+    reserva atômica: dois servidores nunca furam o intervalo.
+  - Um despachante leve dentro do servidor do Tropi (`src/instrumentation.ts` e
+    `modules/crm/pacing-ticker.ts`) acorda a cada 3 s e manda o que já chegou na vez.
+  - A rotina de 10 minutos continua como reserva.
+  - Variáveis opcionais: `DISPATCH_TICKER=off` desliga o despachante; `PACING_TICK_MS` muda a
+    frequência.
+  - **Precisa de um servidor sempre ligado** (contêiner na AWS, por exemplo). Num ambiente sem
+    processo contínuo, as automáticas só sairiam na rotina, uma por rodada.
+- A API oficial e os outros canais não mudam.
+
+> **Risco do QR code:** a conexão pelo celular não é oficial. A Meta pode bloquear o número que
+> manda muitas mensagens para quem não falou antes. O Tropi mantém a regra de 24h também nesse
+> modo: fora dela, só saem os textos marcados como modelo. Para campanhas ou volume alto, use a
+> API oficial. Para um piloto rápido, o QR code é o caminho mais simples.
+
+### Messenger, Instagram e Telegram (oficiais e gratuitos)
+
+- **App da Meta, um só para todas as clínicas:** crie um app tipo **Empresa** em
+  developers.facebook.com, com os produtos Messenger e Instagram. Configure o webhook com
+  `META_VERIFY_TOKEN`, a URL acima e o campo `messages`. O Tropi confere a assinatura
+  `X-Hub-Signature-256`.
+  - Para atender clínicas que não são suas, a Meta exige **Advanced Access** (App Review) nas
+    permissões de mensagens.
+- **Messenger:** a clínica cola o token **da página** (`pages_messaging`, `pages_manage_metadata`).
+  O Tropi confere a página e ativa os eventos dela no app (`subscribed_apps`). Sem esse passo, a
+  Meta não envia nada, e esse é um erro comum.
+- **Instagram, login do Instagram (recomendado):** não precisa de página do Facebook. Usa
+  `graph.instagram.com` com `instagram_business_basic` e `instagram_business_manage_messages`.
+  - O webhook vem assinado com o segredo do app do Instagram (`INSTAGRAM_APP_SECRET`).
+  - Anexos vão por **link**: o Tropi gera um link temporário e assinado, que vale 15 minutos e
+    só abre arquivos **enviados** pela clínica.
+  - Limites do Instagram: imagem até 8 MB; áudio, vídeo e PDF até 25 MB.
+- **Instagram via página do Facebook:** a clínica cola o token da página ligada à conta
+  profissional, e o Tropi encontra a conta do Instagram ligada a ela.
+- **Janela de mensagens:** no Messenger e no Instagram, só dá para responder até 24h depois da
+  última mensagem do paciente. A Meta oferece a etiqueta *Human Agent* (até 7 dias, só para
+  respostas de pessoas), que depende de aprovação no App Review. Fica para depois do piloto.
+- **Telegram (gratuito, sem janela de 24h):** a clínica cria o bot no @BotFather e cola o token.
+  O Tropi confere (`getMe`) e registra o webhook (`setWebhook`) com um **segredo só daquele bot**
+  e recebendo só mensagens.
+  - Limites do Telegram: baixar até 20 MB por arquivo, enviar até 50 MB, cerca de 1 mensagem por
+    segundo por conversa.
+  - Para arquivos maiores, há o servidor local da Bot API (`TELEGRAM_API_BASE`).
+
+> **Ainda não testado contra os provedores reais:** todos os fluxos foram testados de ponta a
+> ponta com servidores simulados, que seguem os formatos do código-fonte da Evolution v2.3.7 e da
+> documentação oficial da Meta e do Telegram. O piloto com contas reais é o próximo passo.
+
+#### Piloto com servidor e celular reais
+
+O roteiro completo está em [`infra/evolution/PILOTO.md`](infra/evolution/PILOTO.md). Ele cobre:
+Evolution no seu computador (`docker-compose.piloto.yml`), 18 passos com o que conferir e as
+consultas no banco.
+
+- **Ensaio automático:** o teste `e2e/evolution-piloto.spec.ts` roda o mesmo roteiro contra uma
+  Evolution de mentira que responde e chama o webhook como a v2.3.7
+  (`e2e/support/fake-evolution.ts`).
+- **Modo gravação:** com `EVOLUTION_CAPTURE_DIR`, cada webhook real é gravado **já sem dados
+  pessoais**. Telefones e LID viram números falsos estáveis; textos, nomes e arquivos viram textos
+  de teste; chaves, links, miniaturas e apikey saem.
+  - `pnpm --filter @ecosaude/channels fixtures:evolution <pasta>` leva as capturas para
+    `packages/channels/src/fixtures/evolution/` e recusa o que ainda parecer pessoal.
+  - Todos os testes de `evolution-fixtures.test.ts` passam a rodar com o formato real.
+  - Em produção, deixe `EVOLUTION_CAPTURE_DIR` vazia.
 
 ### Rotina agendada
 
@@ -1118,6 +1518,60 @@ do horário de confirmação da clínica (ex.: `0 14 * * *` = 11h em Brasília),
 automática nunca roda. Lembrete no dia e regras com espera dependem da rotina de 10 minutos.
 
 Para testar localmente: `curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3002/api/cron/despachar`.
+
+## 6b. Testes automáticos e integração contínua (GitHub Actions)
+
+São duas camadas:
+
+| Camada | Onde | O que garante |
+|---|---|---|
+| Testes de unidade | `packages/core/src/**/*.test.ts`, `packages/channels/src/*.test.ts` | Regras puras: agenda, unidades, permissões, sinais vitais, CID, IA... |
+| Ponta a ponta (Playwright) | `apps/app/e2e/*.spec.ts` | O sistema de verdade no Chromium: telas, banco, permissões e LGPD juntos |
+
+**Os testes de ponta a ponta** (`apps/app/e2e/`):
+
+- `smoke.spec.ts`: sem sessão vai para o login; cada perfil cai na sua tela inicial; telas principais abrem.
+- `prontuario.spec.ts`: do Consultório ao documento conferido: resumo clínico, sinais vitais, CID-10, salvamento automático, receita com alerta de alergia, atestado, finalização com trava no banco, adendo, cancelamento, verificação pública (autêntico, cancelado, adulterado, inexistente), modelos, sigilo, cópia do prontuário, acesso de emergência e recepção sem acesso.
+- `funcionamento.spec.ts`: feriados nacionais sem duplicar, horário próprio ou herdado, fechamento de uma unidade tirando os horários do dia e aparecendo na Agenda, resposta automática dizendo que está fechado e aviso na semana do profissional.
+- `horarios-consultorios.spec.ts`: horário livre some quando todos os consultórios da unidade estão ocupados, volta quando uma sala libera, e a consulta marcada recebe a sala mostrada.
+- `chegada.spec.ts`: "Chegou" no Consultório: trava de 30 minutos, registro de chegada, desfazer, edição simultânea, sem desfazer depois da triagem e sem botão para quem não tem a permissão da agenda.
+- `ritmo.spec.ts`: ritmo do WhatsApp do celular: escolha do ritmo (sugestões e personalizado), automáticas uma por vez com intervalo, parada no limite por hora, resposta digitada saindo na hora, lembrete de consulta que já começou não enviado e a fila na tela de Canais.
+- `evolution-piloto.spec.ts`: ensaio do piloto do WhatsApp com a Evolution de mentira: QR code, mensagens e arquivos do paciente (texto, foto, PDF, nota de voz), entregue e lida, queda que a Evolution recupera, saída pelo celular (401), reconexão pelo código no celular com o código mais recente, fila saindo na reconexão e gravação sem dados pessoais.
+- `celular.spec.ts`: resposta dada direto no celular da clínica (webhook da Evolution com `fromMe`) entrando em Conversas como "Enviada pelo celular", sem duplicar, sem mexer nas 24h e ignorando números que não são contatos.
+- `avisos.spec.ts`: acesso de emergência avisando a gestão no sino (com prova de leitura e e-mail opcional) e triagem urgente avisando a profissional, com a faixa e o som do Consultório.
+- `consultorio.spec.ts`: início no Consultório, gestão sem conteúdo clínico, liberações parciais para a recepção, triagem, ficha parcial, próximo paciente, gestora com CRM.
+- `unidades.spec.ts`: travas do banco (sala ocupada, sala de outra unidade), cadastro de unidade e consultório, semana por período, agendamento herdando unidade e sala, agenda por unidade, equipe restrita a uma unidade.
+
+Regras de todos eles: **qualquer erro de JavaScript na página reprova o teste** (inclusive erro de hidratação do React) e as telas de celular (390 px) não podem rolar para o lado.
+
+**Rodar no seu computador, passo a passo:**
+
+```bash
+pnpm db:up                                   # 1. PostgreSQL do docker-compose
+pnpm test:e2e:prepare                        # 2. cria o banco "ecosaude_e2e", migra e carrega a demonstração
+pnpm --filter @ecosaude/app exec playwright install chromium   # 3. só na 1ª vez: baixa o navegador
+pnpm --filter @ecosaude/app build            # 4. compila o app (os testes usam o app de produção)
+pnpm test:e2e                                # 5. sobe o app na porta 3100 e roda tudo (~1 minuto)
+```
+
+- `pnpm test:e2e --ui` abre o modo visual (passo a passo, com a tela de cada ação).
+- `pnpm test:e2e e2e/unidades.spec.ts` roda só um arquivo.
+- Falhou? O relatório fica em `apps/app/e2e/playwright-report/index.html` (fotos e "trace" de cada passo).
+- `pnpm test:e2e:prepare --reset` apaga e recria o banco de testes do zero (use depois de mudar o `seed`).
+- Mudou o código do app? Repita o passo 4 antes do 5.
+
+**Segurança:** os testes apagam e recriam dados. Por isso usam um banco **só deles** (`E2E_DATABASE_URL`, padrão `postgres://postgres:postgres@localhost:54320/ecosaude_e2e`) e se recusam a rodar em banco cujo nome não termine em `_e2e` ou `_test`. Seu banco de desenvolvimento (`ecosaude`) nunca é tocado. A senha dos usuários de demonstração no banco de testes vira `Tropi-E2E-2026x`.
+
+Variáveis opcionais: `E2E_PORT` (padrão 3100), `E2E_BASE_URL` (testar um app já no ar, sem subir outro) e `PW_CHROMIUM_PATH` (Chromium já instalado em outro lugar).
+
+**No GitHub (automático):** `.github/workflows/ci.yml` roda a cada push e pull request:
+
+1. **Tipos, lint e testes de unidade**;
+2. **Ponta a ponta**: sobe um PostgreSQL 16 temporário, prepara o banco, compila o app e roda o Playwright.
+
+Para ver: aba **Actions** do repositório. Se o e2e falhar, abra a execução e baixe **Artifacts > playwright-report**. Para impedir que código quebrado entre na `main`: Settings > Branches > Add rule > `main` > marque "Require status checks to pass" e escolha os dois jobs.
+
+**Ao criar uma tela ou regra nova:** escreva o teste no mesmo commit. Use `as("beatriz")` / `as("gestor")` / `as("recepcao")` / `as("anonimo")` (fixture em `e2e/support/fixtures.ts`), confira o banco com `value()` e teste as travas como o app com `asTenant()` (`e2e/support/db.ts`). Cenários reaproveitáveis ficam em `e2e/support/scenario.ts`; cada teste deixa o banco pronto para rodar de novo.
 
 ## 7. Problemas comuns
 
@@ -1170,7 +1624,8 @@ São **três projetos** na Vercel apontando para o mesmo repositório.
   automaticamente ao vencer; só o status exibido continua "Em teste" até alguém agir).
 - Códigos de recuperação da 2FA (hoje, quem perde o celular pede a um administrador para redefinir).
 - Integração com provedor de pagamento e emissão de cobrança.
-- CRM antes de produção: teste com os canais reais (piloto).
+- CRM antes de produção: piloto com os canais reais (Evolution, Meta e Telegram).
+- Canais: etiqueta Human Agent (Messenger/Instagram, 7 dias) e modelos da Cloud API com variáveis.
 - Recuperação de senha por e-mail também no backoffice (hoje um administrador redefine a de outro).
 - CRM: modo offline (fila local no navegador e sincronização), campanhas segmentadas,
   envio de modelos com variáveis pela API da Meta.

@@ -5,7 +5,7 @@ import type { ClinicPermission } from "@ecosaude/core/crm";
  * Uma lista só, usada pelo menu lateral, pelo painel inicial e pela busca.
  * Cada item diz quem pode ver (permissão) e as palavras que a busca encontra.
  */
-export type SettingsIcon = "conta" | "preferencias" | "clinica" | "automacoes" | "canais" | "respostas" | "retornos" | "equipe" | "perfis" | "seguranca" | "plano" | "mensagens" | "ia" | "duracoes";
+export type SettingsIcon = "conta" | "preferencias" | "clinica" | "automacoes" | "canais" | "respostas" | "retornos" | "equipe" | "perfis" | "seguranca" | "plano" | "mensagens" | "ia" | "duracoes" | "unidades";
 
 export interface SettingsItem {
   href: string;
@@ -76,6 +76,14 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         ],
       },
       {
+        href: "/configuracoes/unidades",
+        label: "Unidades e consultórios",
+        hint: "Endereços onde a clínica atende e os consultórios de cada um",
+        icon: "unidades",
+        permission: "config.clinica",
+        keywords: ["unidade", "filial", "endereço", "consultório", "sala", "cnes", "cep", "procedimento", "local", "sede"],
+      },
+      {
         href: "/configuracoes/duracoes",
         label: "Duração das consultas",
         hint: "Quanto cada consulta dura de verdade e a duração sugerida",
@@ -86,7 +94,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
       {
         href: "/configuracoes/automacoes",
         label: "Automações",
-        hint: "Ligar, desligar e criar regras: quando acontecer algo, o CRM age sozinho",
+        hint: "Ligar, desligar e criar regras: quando acontecer algo, o Tropi age sozinho",
         icon: "automacoes",
         permission: "config.automacoes",
         keywords: [

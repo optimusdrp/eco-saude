@@ -1,8 +1,8 @@
-import { MODULE_IDS, MODULE_LABEL, type ModuleId } from "@ecosaude/core";
+import { MODULE_FULL_NAME, MODULE_IDS, type ModuleId } from "@ecosaude/core";
 import { Lock, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { buttonStyles } from "@/components/ui/styles";
 import { getEntitlements, requireUser } from "@/lib/auth/dal";
 
@@ -20,7 +20,7 @@ const PITCH: Record<ModuleId, { title: string; points: string[] }> = {
   },
   pep: {
     title: "Prontuário eletrônico",
-    points: ["Evolução clínica com modelos por especialidade", "Prescrição e atestados com assinatura digital", "Histórico completo e seguro (LGPD/CFM)"],
+    points: ["Evolução clínica com modelos por especialidade", "Receitas, atestados e pedidos de exame em PDF, com código de verificação", "Histórico completo e seguro, guardado por 20 anos (CFM e LGPD)"],
   },
   bi: {
     title: "Indicadores e inteligência",
@@ -39,6 +39,9 @@ export default async function ModulePage({ params }: { params: Promise<{ modulo:
   const user = await requireUser();
   const ent = await getEntitlements(user.clinicId);
   const enabled = ent.modules.includes(id);
+  // Módulos já prontos têm tela própria
+  if (enabled && id === "crm") redirect("/hoje");
+  if (enabled && id === "pep") redirect("/prontuario");
   const pitch = PITCH[id];
 
   return (
@@ -46,7 +49,7 @@ export default async function ModulePage({ params }: { params: Promise<{ modulo:
       <span className="mx-auto inline-flex size-14 items-center justify-center rounded-2xl bg-crm-tint text-crm">
         {enabled ? <Sparkles className="size-7" aria-hidden /> : <Lock className="size-7" aria-hidden />}
       </span>
-      <p className="mt-4 text-sm font-semibold text-crm">{MODULE_LABEL[id]}</p>
+      <p className="mt-4 text-sm font-semibold text-crm">{MODULE_FULL_NAME[id]}</p>
       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">{pitch.title}</h1>
       <p className="mt-2 text-ink-soft">
         {enabled
@@ -60,10 +63,10 @@ export default async function ModulePage({ params }: { params: Promise<{ modulo:
           </li>
         ))}
       </ul>
-      {!enabled ? <p className="mt-5 text-sm text-ink-soft">Para contratar, fale com a equipe EcoSaúde ou com a gestão da clínica.</p> : null}
+      {!enabled ? <p className="mt-5 text-sm text-ink-soft">Para contratar, fale com a equipe Tropi ou com a gestão da clínica.</p> : null}
       {ent.modules.includes("crm") && id !== "crm" ? (
         <Link href="/hoje" className={buttonStyles("secondary", "mt-5")}>
-          Voltar para o CRM
+          Voltar para o Atendimento
         </Link>
       ) : null}
     </div>

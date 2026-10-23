@@ -78,14 +78,14 @@ export function Security() {
                       <span className={cn("size-2.5 rounded-full", moduleColor[m.id].dot)} aria-hidden />
                       {m.name}
                     </span>
-                    <span className={cn("text-sm font-semibold", down ? "text-erp-ink" : "text-pep-ink")}>
+                    <span className={cn("text-sm font-semibold", down ? "text-erp-ink" : "text-ok-ink")}>
                       {down ? "Em manutenção" : "Funcionando"}
                     </span>
                   </li>
                 );
               })}
             </ul>
-            <p className="mt-3 text-sm text-ink-soft">Exemplo: o ERP em manutenção não afeta agenda, conversas nem prontuário.</p>
+            <p className="mt-3 text-sm text-ink-soft">Exemplo: a Gestão em manutenção não afeta agenda, conversas nem prontuário.</p>
           </aside>
         </div>
       </Container>

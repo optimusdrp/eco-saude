@@ -184,7 +184,7 @@ export function Shell({
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 rounded-lg px-1 text-white">
-      <LogoMark className="size-7" />
+      <LogoMark className="size-7" onDark />
       <span className="font-display text-lg font-bold">Backoffice</span>
     </Link>
   );

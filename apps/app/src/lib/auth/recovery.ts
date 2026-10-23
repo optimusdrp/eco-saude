@@ -26,7 +26,7 @@ import { hitThrottle, notifyPasswordChanged, RESET_MINUTES, RESET_PER_EMAIL_HOUR
  *    A pessoa não fica conectada automaticamente: entra de novo, com 2FA quando ativa.
  */
 
-const SENT_MESSAGE = `Se este e-mail tiver acesso ao EcoSaúde, o link chega em instantes. Confira também a caixa de spam. O link vale por ${RESET_MINUTES} minutos.`;
+const SENT_MESSAGE = `Se este e-mail tiver acesso ao Tropi, o link chega em instantes. Confira também a caixa de spam. O link vale por ${RESET_MINUTES} minutos.`;
 const INVALID_LINK = "Este link expirou ou já foi usado. Peça um novo abaixo.";
 
 export async function requestPasswordResetAction(_prev: ActionState, form: FormData): Promise<ActionState> {

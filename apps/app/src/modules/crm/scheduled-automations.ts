@@ -5,6 +5,7 @@ import { automationSettings, sendAutomated } from "./automation-settings";
 import { logEvent } from "./journey";
 import { templateVars } from "./messaging";
 import type { CrmScope } from "./scope";
+import { placeVars } from "./units";
 
 /**
  * AUTOMAÇÕES COM HORA MARCADA (rodam na rotina agendada, a cada 10 min)
@@ -35,7 +36,7 @@ export async function runScheduledAutomations(tx: Tx, scope: CrmScope, now = new
     for (const a of due) {
       // "No dia": consulta de amanhã cedo não recebe lembrete hoje à noite
       if (utcToZoned(a.startsAt).date !== today) continue;
-      const sent = await sendAutomated(tx, { contactId: a.contactId, key: "lembrete", vars: templateVars(a.contact, scope.clinicName, { startsAt: a.startsAt, professionalName: a.professional.name }), meta: { appointmentId: a.id } });
+      const sent = await sendAutomated(tx, { contactId: a.contactId, key: "lembrete", vars: templateVars(a.contact, scope.clinicName, { startsAt: a.startsAt, professionalName: a.professional.name }, await placeVars(tx, a.unitId, a.roomId)), meta: { appointmentId: a.id } });
       await tx.update(schema.appointments).set({ reminderSentAt: now }).where(eq(schema.appointments.id, a.id));
       if (sent) {
         await logEvent(tx, { contactId: a.contactId, type: "reminder_sent", data: { appointmentId: a.id } });

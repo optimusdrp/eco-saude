@@ -17,7 +17,7 @@ export default async function VerifyPage() {
     <>
       <h1 className="text-2xl font-bold">Verificação em duas etapas</h1>
       <p className="mt-1 mb-6 text-ink-soft">
-        Abra o aplicativo autenticador no celular e digite o código de “EcoSaúde Backoffice”.
+        Abra o aplicativo autenticador no celular e digite o código de “Tropi Backoffice” (se ativou antes da mudança de nome, aparece como “EcoSaúde Backoffice”).
       </p>
       <VerifyCodeForm />
       <form action={logoutAction} className="mt-4">

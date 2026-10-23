@@ -1,0 +1,22 @@
+# PILOTO NO SEU COMPUTADOR (Evolution real + Tropi em "pnpm dev:app")
+#
+# Complementa o docker-compose.yml: sem Caddy e sem domínio. A Evolution fica só em
+# http://localhost:8080 (nada exposto na internet) e chama o Tropi em host.docker.internal.
+#
+#   cd infra/evolution
+#   cp .env.example .env            (preencha AUTHENTICATION_API_KEY e POSTGRES_PASSWORD;
+#                                    EVOLUTION_DOMAIN pode ficar com qualquer valor)
+#   docker compose -f docker-compose.yml -f docker-compose.piloto.yml up -d evolution postgres redis
+#
+# Roteiro completo: infra/evolution/PILOTO.md
+services:
+  evolution:
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SERVER_URL: http://localhost:8080
+      # Mostra no log cada webhook enviado (ajuda a comparar com as capturas do Tropi)
+      LOG_LEVEL: ERROR,WARN,INFO,WEBHOOKS
+    extra_hosts:
+      # Linux: faz host.docker.internal apontar para o seu computador (no Mac/Windows já existe)
+      - "host.docker.internal:host-gateway"

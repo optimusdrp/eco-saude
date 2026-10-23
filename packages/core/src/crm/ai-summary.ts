@@ -12,7 +12,7 @@
  *  - checkSummary: confere o JSON da IA (formato, tamanho, nada clínico, nenhum dado
  *    ocultado) e avisa quando cita valor ou horário que não está nas mensagens lidas.
  *  - ruleSummary: o PLANO B. Sem IA (desligada, sem chave, lenta, instável), monta o
- *    resumo com as regras do CRM: intenções por palavras-chave, preferência de dia e
+ *    resumo com as regras do Tropi: intenções por palavras-chave, preferência de dia e
  *    período, próxima consulta, últimas mensagens e notas.
  */
 import { hasClinicalAdvice, leaksMasked, maskPII } from "./ai";
@@ -107,7 +107,7 @@ export function buildSummaryPrompt(ctx: SummaryContext): { system: string; user:
   const user = [
     "CONTEXTO",
     `Paciente: ${ctx.patientFirstName}`,
-    `Etapa no CRM: ${ctx.stage}${ctx.tags.length ? `; etiquetas: ${ctx.tags.join(", ")}` : ""}`,
+    `Etapa no Tropi: ${ctx.stage}${ctx.tags.length ? `; etiquetas: ${ctx.tags.join(", ")}` : ""}`,
     `Próxima consulta: ${ctx.nextAppointment ?? "nenhuma marcada"}`,
     `SITUACAO: ${state.label}`,
     ctx.totalMessages > ctx.messages.length ? `A conversa tem ${ctx.totalMessages} mensagens; abaixo estão as ${ctx.messages.length} mais recentes.` : "",

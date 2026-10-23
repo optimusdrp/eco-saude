@@ -1,0 +1,14 @@
+{
+  "event": "qrcode.updated",
+  "instance": "tropi-piloto",
+  "data": {
+    "qrcode": {
+      "instance": "tropi-piloto"
+    }
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "recebidas": 0
+  }
+}

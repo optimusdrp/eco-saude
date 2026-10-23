@@ -10,7 +10,7 @@ export default async function FirstAccessPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const step = pendingStep(user);
-  if (step !== "change-password") redirect(step ? routeForStep(step) : "/hoje");
+  if (step !== "change-password") redirect(step ? routeForStep(step) : "/");
   return (
     <>
       <h1 className="text-2xl font-bold">Crie sua senha</h1>

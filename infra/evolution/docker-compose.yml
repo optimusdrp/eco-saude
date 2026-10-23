@@ -1,0 +1,90 @@
+# EVOLUTION API para o Tropi (WhatsApp por QR code/código e Cloud API via Evolution)
+#
+# Roda num servidor SEMPRE LIGADO (ex.: AWS em São Paulo): o WhatsApp do celular precisa de uma
+# conexão aberta o tempo todo. Sugestão: AWS Lightsail/EC2 em São Paulo (sa-east-1),
+# 2 vCPU e 2-4 GB de RAM para dezenas de clínicas.
+#
+# Uso:
+#   1. cp .env.example .env  e preencha (domínio, chave, senhas)
+#   2. aponte o DNS do domínio (ex.: evolution.suaempresa.com.br) para o IP do servidor
+#   3. docker compose up -d
+#   4. no servidor do Tropi: EVOLUTION_API_URL=https://<domínio>, EVOLUTION_API_KEY=<a mesma chave>
+#
+# Versão FIXA da imagem: atualize de propósito, lendo as notas da versão (a Evolution muda rápido).
+services:
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: always
+    depends_on: [postgres, redis]
+    env_file: .env
+    environment:
+      SERVER_URL: https://${EVOLUTION_DOMAIN}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_PASSWORD}@postgres:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: tropi
+      # Guarda as mensagens: o Tropi pede os arquivos depois (getBase64FromMediaMessage)
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_LOCAL_ENABLED: "false"
+      # Segurança: chave obrigatória e nada de expor tokens das instâncias na listagem
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+      DEL_INSTANCE: "false"
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      WEBHOOK_REQUEST_TIMEOUT_MS: "30000"
+      CONFIG_SESSION_PHONE_CLIENT: Tropi
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: "30"
+      LANGUAGE: pt-BR
+      LOG_LEVEL: ERROR,WARN,INFO
+      # Cloud API via Evolution: a Meta chama https://<domínio>/webhook/meta
+      WA_BUSINESS_URL: https://graph.facebook.com
+      WA_BUSINESS_VERSION: v23.0
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks: [interna]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+    networks: [interna]
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - evolution_redis:/data
+    networks: [interna]
+
+  # HTTPS automático (Let's Encrypt). Só o Caddy fica exposto na internet.
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on: [evolution]
+    ports: ["80:80", "443:443"]
+    environment:
+      EVOLUTION_DOMAIN: ${EVOLUTION_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    networks: [interna]
+
+volumes:
+  evolution_instances:
+  evolution_pg:
+  evolution_redis:
+  caddy_data:
+
+networks:
+  interna:

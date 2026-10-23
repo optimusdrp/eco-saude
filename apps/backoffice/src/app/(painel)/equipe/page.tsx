@@ -83,7 +83,7 @@ export default async function StaffPage() {
                     {STAFF_ROLES.map((r) => (
                       <td key={r} className="px-2 py-2">
                         {(ROLE_PERMISSIONS[r] as readonly string[]).includes(perm) ? (
-                          <span className="font-semibold text-pep-ink">Sim</span>
+                          <span className="font-semibold text-ok-ink">Sim</span>
                         ) : (
                           <span className="text-ink-soft">Não</span>
                         )}

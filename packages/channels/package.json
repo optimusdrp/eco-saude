@@ -4,12 +4,21 @@
   "private": true,
   "description": "Canais de mensagem (WhatsApp, Telegram, Instagram, Messenger): simulação e adaptadores reais",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "echo sem lint",
-    "test": "tsx --test src/*.test.ts"
+    "test": "tsx --test src/*.test.ts",
+    "fixtures:evolution": "tsx scripts/fixtures-evolution.ts"
   },
-  "dependencies": { "@ecosaude/core": "workspace:*" },
-  "devDependencies": { "@types/node": "26.6.4", "tsx": "4.23.15", "typescript": "6.0.3" }
+  "dependencies": {
+    "@ecosaude/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  }
 }

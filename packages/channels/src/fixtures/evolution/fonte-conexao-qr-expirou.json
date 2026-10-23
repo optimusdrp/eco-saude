@@ -1,0 +1,18 @@
+{
+  "event": "connection.update",
+  "instance": "tropi-piloto",
+  "data": {
+    "instance": "tropi-piloto",
+    "state": "refused",
+    "statusReason": 428,
+    "wuid": null,
+    "profileName": null
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "conexao": "refused",
+    "tela": "desconectado",
+    "aviso": "expirou"
+  }
+}

@@ -380,6 +380,7 @@ function RoleEditor({
                         label={i.label}
                         hint={i.hint}
                         sensitive={"sensitive" in i && i.sensitive}
+                        healthProfessional={"healthProfessional" in i && i.healthProfessional}
                       />
                     </li>
                   ))}
@@ -456,6 +457,7 @@ function Switch({
   label,
   hint,
   sensitive,
+  healthProfessional,
 }: {
   name: string;
   value: string;
@@ -464,6 +466,8 @@ function Switch({
   label: string;
   hint: string;
   sensitive?: boolean;
+  /** Só vale para quem tem registro em conselho */
+  healthProfessional?: boolean;
 }) {
   return (
     <label className="flex min-h-12 cursor-pointer items-start gap-3 py-2">
@@ -487,6 +491,7 @@ function Switch({
               <ShieldAlert className="size-3" aria-hidden /> acesso amplo
             </span>
           ) : null}
+          {healthProfessional ? <span className="rounded-full bg-pep-tint px-1.5 py-0.5 text-[0.68rem] font-semibold text-pep-ink">só profissional de saúde</span> : null}
         </span>
         <span className="block text-xs text-ink-soft">{hint}</span>
       </span>
@@ -768,7 +773,7 @@ function Compare({ roles }: { roles: RoleView[] }) {
                     <td key={r.id} className="px-1 py-1.5 text-center">
                       {r.permissions.includes(i.key) ? (
                         <Check
-                          className="mx-auto size-4 text-pep-ink"
+                          className="mx-auto size-4 text-ok-ink"
                           aria-label="sim"
                         />
                       ) : (

@@ -239,6 +239,10 @@ export function ScheduleDialog({ professionals }: { professionals: ProfessionalO
                         className={cn("min-h-11 rounded-xl px-2 text-sm font-semibold ring-1 transition-colors", active ? "bg-crm text-white ring-crm" : "bg-paper ring-line hover:ring-crm")}
                       >
                         {s.label}
+                        {/* Onde: unidade (se houver mais de uma) e consultório sugerido */}
+                        {s.unit || s.room ? (
+                          <span className={cn("block text-xs font-normal", active ? "text-white/80" : "text-ink-soft")}>{[s.unit, s.room].filter(Boolean).join(", ")}</span>
+                        ) : null}
                       </button>
                     );
                   })}

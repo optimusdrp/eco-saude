@@ -239,7 +239,7 @@ function FeatureRowForm({ subscriptionId, row, disabled }: { subscriptionId: str
         <input type="hidden" name="subscriptionId" value={subscriptionId} />
         <input type="hidden" name="submoduleId" value={row.submoduleId} />
         <span
-          className={cn("w-20 text-right text-xs font-bold", effective ? "text-pep-ink" : "text-ink-soft")}
+          className={cn("w-20 text-right text-xs font-bold", effective ? "text-ok-ink" : "text-ink-soft")}
           aria-live="polite"
         >
           {pending ? "Salvando..." : effective ? "Liberada" : "Bloqueada"}

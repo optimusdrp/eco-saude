@@ -1,6 +1,6 @@
 "use client";
 
-import { BR_TIME_ZONES, CHANNEL_LABEL, suggestTimeZone, timeZoneLabel, type Channel, type ChannelMode, type WeeklySchedule } from "@ecosaude/core/crm";
+import { BR_TIME_ZONES, suggestTimeZone, timeZoneLabel, type WeeklySchedule } from "@ecosaude/core/crm";
 import { Copy, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
@@ -12,14 +12,13 @@ import {
   deleteQuickReplyAction,
   resetClinicUserPasswordAction,
   resetClinicUserTwoFactorAction,
-  saveChannelAction,
   saveQuickReplyAction,
   toggleClinicUserAction,
   updateClinicUserAction,
   updateClinicProfileAction,
 } from "@/modules/crm/actions/settings";
 import { saveCrmSettingsAction, saveProfessionalAction } from "@/modules/crm/actions/clinic";
-import { WeekEditor } from "./clinica/WeekEditor";
+import { WeekEditor, type WeekPlaces } from "./clinica/WeekEditor";
 
 /** Formulários dos Ajustes (rodam no navegador e chamam server actions). */
 
@@ -296,64 +295,15 @@ function EditUserForm({ id, name, roleId, roles, onSaved }: { id: string; name: 
   );
 }
 
-/* ----------------------------------- Canais ----------------------------------- */
-
-export interface ChannelValues {
-  channel: Channel;
-  mode: ChannelMode;
-  active: boolean;
-  displayName: string;
-  externalAccountId: string;
-  serverReady: boolean;
-}
-
-const accountLabel: Record<Channel, { label: string; placeholder: string }> = {
-  whatsapp: { label: "Phone number ID (Meta)", placeholder: "Ex.: 1234567890" },
-  instagram: { label: "ID da conta profissional do Instagram", placeholder: "Ex.: 17841400000000000" },
-  facebook: { label: "ID da página do Facebook", placeholder: "Ex.: 104000000000000" },
-  telegram: { label: "Usuário do bot", placeholder: "Ex.: ClinicaExemploBot" },
-};
-
-export function ChannelForm({ initial }: { initial: ChannelValues }) {
-  const [state, action] = useActionState(saveChannelAction, {});
-  useRefreshOnOk(state);
-  const c = initial.channel;
-  return (
-    <form action={action} className="space-y-3">
-      <input type="hidden" name="channel" value={c} />
-      <FormMessage state={state} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Nome exibido" name="displayName" id={`ch-dn-${c}`} defaultValue={initial.displayName} placeholder={c === "whatsapp" ? "(51) 3333-0000" : CHANNEL_LABEL[c]} />
-        <Field
-          label={accountLabel[c].label}
-          name="externalAccountId"
-          id={`ch-acc-${c}`}
-          defaultValue={initial.externalAccountId}
-          placeholder={accountLabel[c].placeholder}
-          error={state.errors?.externalAccountId}
-          hint="É assim que o webhook descobre que a mensagem é desta clínica."
-        />
-        <SelectField label="Modo" name="mode" id={`ch-mode-${c}`} defaultValue={initial.mode}>
-          <option value="simulacao">Simulação (testes e treinamento)</option>
-          <option value="real" disabled={!initial.serverReady}>
-            Real{initial.serverReady ? "" : " (credencial ausente no servidor)"}
-          </option>
-        </SelectField>
-        <CheckboxField name="active" defaultChecked={initial.active} label="Canal ativo" hint="Desativado: não envia nem recebe por este canal." className="sm:pt-5" />
-      </div>
-      <SubmitButton variant="secondary" pendingText="Salvando...">
-        Salvar {CHANNEL_LABEL[c]}
-      </SubmitButton>
-    </form>
-  );
-}
-
 /* ------------------------------- Profissionais -------------------------------- */
 
 export interface ProfessionalValues {
   id?: string;
   name: string;
   specialty: string;
+  council?: string;
+  councilNumber?: string;
+  councilUf?: string;
   color: string;
   slotMinutes: number;
   /** Semana completa: períodos e duração por dia */
@@ -385,7 +335,7 @@ const NEW_PROFESSIONAL: ProfessionalValues = {
 const COLORS: { id: string; label: string; dot: string }[] = [
   { id: "crm", label: "Roxo", dot: "bg-crm" },
   { id: "erp", label: "Amarelo", dot: "bg-erp" },
-  { id: "pep", label: "Verde", dot: "bg-pep" },
+  { id: "pep", label: "Verde", dot: "bg-ok" },
   { id: "bi", label: "Azul", dot: "bg-bi" },
 ];
 
@@ -393,7 +343,7 @@ const COLORS: { id: string; label: string; dot: string }[] = [
  * Criar/editar profissional: expediente, intervalo, dias de atendimento e
  * duração da consulta. É isso que a agenda usa para mostrar horários livres.
  */
-export function ProfessionalButton({ initial, users }: { initial?: ProfessionalValues; users: { id: string; name: string }[] }) {
+export function ProfessionalButton({ initial, users, places }: { initial?: ProfessionalValues; users: { id: string; name: string }[]; places?: WeekPlaces }) {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   return (
@@ -417,13 +367,13 @@ export function ProfessionalButton({ initial, users }: { initial?: ProfessionalV
         description="Os horários de cada dia definem os horários livres da agenda e da lista de espera."
         wide
       >
-        <ProfessionalForm key={formKey} initial={initial ?? NEW_PROFESSIONAL} users={users} onSaved={() => setOpen(false)} />
+        <ProfessionalForm key={formKey} initial={initial ?? NEW_PROFESSIONAL} users={users} places={places} onSaved={() => setOpen(false)} />
       </Dialog>
     </>
   );
 }
 
-function ProfessionalForm({ initial, users, onSaved }: { initial: ProfessionalValues; users: { id: string; name: string }[]; onSaved: () => void }) {
+function ProfessionalForm({ initial, users, places, onSaved }: { initial: ProfessionalValues; users: { id: string; name: string }[]; places?: WeekPlaces; onSaved: () => void }) {
   const [state, action] = useActionState(saveProfessionalAction, {});
   useRefreshOnOk(state);
   // Mensagem de sucesso com aviso (consultas fora do novo horário): mantém aberto para a pessoa ler
@@ -447,8 +397,14 @@ function ProfessionalForm({ initial, users, onSaved }: { initial: ProfessionalVa
         <Field label="Nome" name="name" id={`pro-name-${p}`} placeholder="Dra. Ana Souza" defaultValue={val("name")} error={state.errors?.name} />
         <Field label="Especialidade" name="specialty" id={`pro-spec-${p}`} placeholder="Dermatologia" defaultValue={val("specialty")} />
       </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_5rem] gap-3">
+        <Field label="Conselho" name="council" id={`pro-council-${p}`} placeholder="CRM" defaultValue={val("council")} error={state.errors?.council} />
+        <Field label="Nº do registro" name="councilNumber" id={`pro-cnum-${p}`} defaultValue={val("councilNumber")} error={state.errors?.councilNumber} />
+        <Field label="UF" name="councilUf" id={`pro-cuf-${p}`} maxLength={2} defaultValue={val("councilUf")} error={state.errors?.councilUf} />
+      </div>
+      <p className="-mt-2 text-xs text-ink-soft">Vai na receita, no atestado e nos demais documentos do Prontuário (com o acesso ligado abaixo).</p>
 
-      <WeekEditor value={week} onChange={setWeek} slotMinutes={slot} onSlotChange={setSlot} idPrefix={`pro-week-${p}`} />
+      <WeekEditor value={week} onChange={setWeek} slotMinutes={slot} onSlotChange={setSlot} idPrefix={`pro-week-${p}`} places={places} />
       {state.errors?.weeklySchedule || state.errors?.slotMinutes ? <p className="text-sm font-semibold text-alert">{state.errors.weeklySchedule ?? state.errors.slotMinutes}</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">

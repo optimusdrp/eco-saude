@@ -133,7 +133,7 @@ export function parseNpsScore(text: string): number | null {
 
 /* --------------------------------- Modelos ---------------------------------- */
 
-export const TEMPLATE_VARIABLES = ["nome", "primeiro_nome", "data", "hora", "profissional", "clinica", "horario_atendimento", "link_avaliacao"] as const;
+export const TEMPLATE_VARIABLES = ["nome", "primeiro_nome", "data", "hora", "profissional", "clinica", "horario_atendimento", "link_avaliacao", "local", "endereco", "consultorio"] as const;
 export type TemplateVariables = Partial<Record<(typeof TEMPLATE_VARIABLES)[number], string>>;
 
 /** Troca {{variavel}} pelo valor. Variáveis sem valor somem (não aparece "{{data}}" para o paciente). */

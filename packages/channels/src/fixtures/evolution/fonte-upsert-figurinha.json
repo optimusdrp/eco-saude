@@ -1,0 +1,39 @@
+{
+  "event": "messages.upsert",
+  "instance": "tropi-piloto",
+  "data": {
+    "key": {
+      "remoteJid": "5551990000001@s.whatsapp.net",
+      "fromMe": false,
+      "id": "3EB0A1B2C3D4E5F60008"
+    },
+    "pushName": "Nome de teste",
+    "status": "DELIVERY_ACK",
+    "message": {
+      "stickerMessage": {
+        "mimetype": "image/webp",
+        "isAnimated": false,
+        "fileLength": {
+          "low": 18001,
+          "high": 0,
+          "unsigned": true
+        }
+      },
+      "messageContextInfo": {
+        "deviceListMetadataVersion": 2
+      }
+    },
+    "contextInfo": null,
+    "messageType": "stickerMessage",
+    "messageTimestamp": 1792750500,
+    "instanceId": "7f0c2b9e-0000-4000-8000-000000000001",
+    "source": "android"
+  },
+  "date_time": "2026-10-23T10:15:00.000Z",
+  "sender": "5551990000002@s.whatsapp.net",
+  "_espera": {
+    "recebidas": 1,
+    "anexo": "image",
+    "mime": "image/webp"
+  }
+}

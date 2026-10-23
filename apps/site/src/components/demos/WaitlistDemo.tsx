@@ -47,7 +47,7 @@ export function WaitlistDemo() {
     idle: { who: "Ana Lúcia Reis", note: "Confirmada", tone: "bg-paper" },
     cancelled: { who: "Horário livre", note: "Ana Lúcia desmarcou", tone: "bg-alert-tint" },
     offering: { who: "Oferecendo à lista de espera", note: "3 pacientes avisados", tone: "bg-erp-tint" },
-    filled: { who: "Marcos Teles", note: "Confirmou pelo WhatsApp", tone: "bg-pep-tint" },
+    filled: { who: "Marcos Teles", note: "Confirmou pelo WhatsApp", tone: "bg-ok-tint" },
   }[step];
 
   const message = {
@@ -108,7 +108,7 @@ export function WaitlistDemo() {
                 key={name}
                 className={cn(
                   "rounded-xl px-3 py-2.5 text-sm ring-1 transition-colors duration-300",
-                  winner ? "bg-pep-tint ring-pep" : notified ? "bg-erp-tint ring-erp/50" : "bg-fog ring-transparent",
+                  winner ? "bg-ok-tint ring-ok" : notified ? "bg-erp-tint ring-erp/50" : "bg-fog ring-transparent",
                 )}
               >
                 <span className="block font-semibold">{name}</span>

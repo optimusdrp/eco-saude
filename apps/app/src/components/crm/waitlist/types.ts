@@ -24,6 +24,9 @@ export interface WaitEntry {
   openOffer: { label: string; expiresMs: number } | null;
   conversationId: string | null;
   optedOut: boolean;
+  /** Unidade em que aceita ser atendido (null = qualquer) */
+  unitId: string | null;
+  unitName: string | null;
 }
 
 export interface Opportunity {
@@ -56,6 +59,8 @@ export interface WaitlistData {
   opportunities: Opportunity[];
   offers: OfferView[];
   professionals: { id: string; name: string; slotMinutes: number; color: string }[];
+  /** Unidades ativas (só com mais de uma: escolha da unidade na lista) */
+  units: { id: string; name: string }[];
   stats: { waiting: number; offered: number; avgDays: number; filled30: number; closed30: number; avgAcceptMin: number | null };
   serverNowMs: number;
   canEdit: boolean;

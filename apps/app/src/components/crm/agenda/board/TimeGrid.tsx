@@ -48,13 +48,13 @@ export interface GridColumn {
 
 const statusTone: Record<string, string> = {
   agendado: "bg-paper ring-1 ring-line",
-  confirmado: "bg-pep-tint ring-1 ring-pep/40",
+  confirmado: "bg-ok-tint ring-1 ring-ok/40",
   compareceu: "bg-bi-tint ring-1 ring-bi/30",
   faltou: "bg-alert-tint ring-1 ring-alert/40",
   cancelado: "bg-fog ring-1 ring-line opacity-60",
 };
 const statusIcon = { agendado: Clock3, confirmado: CheckCircle2, compareceu: UserCheck, faltou: UserX, cancelado: Ban };
-const riskDot = { baixo: "bg-pep", medio: "bg-erp", alto: "bg-alert" };
+const riskDot = { baixo: "bg-ok", medio: "bg-erp", alto: "bg-alert" };
 
 export function TimeGrid({
   columns,
@@ -213,7 +213,7 @@ export function TimeGrid({
                     ))}
                   </>
                 ) : (
-                  <Shade from={range.start} to={range.end} top={top} label={c.schedule.offLabel ? `ausente: ${c.schedule.offLabel}` : "não atende neste dia"} />
+                  <Shade from={range.start} to={range.end} top={top} label={c.schedule.offLabel ? (c.schedule.offLabel.startsWith("Fechado") ? c.schedule.offLabel : `ausente: ${c.schedule.offLabel}`) : "não atende neste dia"} />
                 )
               ) : null}
 
@@ -299,6 +299,7 @@ export function TimeGrid({
                     {h > 30 ? (
                       <span className="block truncate text-ink-soft">
                         {a.time}–{a.endTime}
+                        {a.roomName ? `, ${a.roomName}` : ""}
                         {a.service ? `, ${a.service}` : ""}
                       </span>
                     ) : null}
@@ -359,7 +360,7 @@ function OccupancyRibbon({ col, range }: { col: GridColumn; range: { start: numb
   return (
     <div className="mt-1.5">
       <div className="relative h-1.5 overflow-hidden rounded-full bg-fog" aria-hidden>
-        <div className="absolute inset-y-0 bg-pep-tint" style={{ left: pct(s.start), width: w(s.start, s.end) }} />
+        <div className="absolute inset-y-0 bg-ok-tint" style={{ left: pct(s.start), width: w(s.start, s.end) }} />
         {s.gaps.map((g) => (
           <div key={g.start} className="absolute inset-y-0 bg-ink/15" style={{ left: pct(g.start), width: w(g.start, g.end) }} />
         ))}

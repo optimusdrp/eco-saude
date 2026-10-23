@@ -89,7 +89,7 @@ export function LeadNoteForm({ leadId }: { leadId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <SubmitButton variant="secondary">Adicionar anotação</SubmitButton>
         {state.ok ? (
-          <p role="status" className="text-sm font-semibold text-pep-ink">
+          <p role="status" className="text-sm font-semibold text-ok-ink">
             {state.message}
           </p>
         ) : null}

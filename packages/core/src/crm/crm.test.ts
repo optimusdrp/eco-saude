@@ -1,5 +1,5 @@
 /**
- * Testes das regras puras do CRM.
+ * Testes das regras puras do Tropi.
  * Rodar: pnpm --filter @ecosaude/core test
  */
 import assert from "node:assert/strict";
@@ -764,7 +764,7 @@ describe("jornada, cadastro e relacionamento com IA (regras puras)", async () =>
       daysInStage: 5,
       canMarket: true,
     };
-    assert.equal(ns.nextStep(base)!.title, "Lead há 3 dias sem resposta: mande esta mensagem");
+    assert.equal(ns.nextStep(base)!.title, "Interessado há 3 dias sem resposta: mande esta mensagem");
     assert.equal(ns.nextStep({ ...base, askedPrice: true })!.kind, "oferecer_horario");
     assert.equal(ns.nextStep({ ...base, waiting: true, waitingHours: 5 })!.title, "Esperando resposta há 5 h: responda agora");
     assert.equal(ns.nextStep({ ...base, daysSinceLast: 1 }), null);
@@ -1159,4 +1159,30 @@ describe("anexos: tipo pelo conteúdo, limites e nomes", async () => {
     assert.equal(at.formatBytes(1_258_291), "1,2 MB");
     assert.equal(at.formatBytes(830 * 1024), "830 KB");
   });
+});
+
+/* ------------------------- Unidades e consultórios ------------------------- */
+import { fixedRoomClashes, formatAddress, periodAt, tightUnitChanges, unitAt, unitsOfWeek, validateWeekPlaces } from "./units";
+
+it("unidade e consultório por período da semana", () => {
+  const U1 = "11111111-1111-4111-8111-111111111111";
+  const U2 = "22222222-2222-4222-8222-222222222222";
+  const R1 = "33333333-3333-4333-8333-333333333333";
+  const week = { "1": { periods: [{ start: "08:00", end: "12:00", unitId: U1, roomId: R1 }, { start: "14:00", end: "18:00", unitId: U2 }] }, "2": { periods: [{ start: "08:00", end: "12:00" }] } };
+  assert.equal(periodAt(week, 1, 9 * 60, 9 * 60 + 30)?.roomId, R1);
+  assert.equal(periodAt(week, 1, 12 * 60, 12 * 60 + 30), null);
+  assert.equal(unitAt(week, 1, 15 * 60, 15 * 60 + 30, "MAIN"), U2);
+  assert.equal(unitAt(week, 2, 9 * 60, 9 * 60 + 30, "MAIN"), "MAIN"); // período sem unidade = principal
+  assert.equal(unitAt(week, 1, 13 * 60, 13 * 60 + 30, "MAIN"), U2); // fora do expediente: período mais próximo
+  assert.deepEqual(unitsOfWeek(week, "MAIN").sort(), [U1, U2, "MAIN"].sort());
+  const units = [{ id: U1, name: "Centro", main: true, active: true }, { id: U2, name: "Bairro", main: false, active: true }];
+  assert.deepEqual(validateWeekPlaces(week, units, [{ id: R1, unitId: U1, name: "C1", kind: "consultorio", active: true }]), []);
+  assert.equal(validateWeekPlaces(week, units, [{ id: R1, unitId: U2, name: "C1", kind: "consultorio", active: true }]).length, 1);
+  const clashes = fixedRoomClashes(week, [{ name: "Dr. B", week: { "1": { periods: [{ start: "11:00", end: "13:00", roomId: R1 }] } } }]);
+  assert.equal(clashes.length, 1);
+  assert.equal(clashes[0]!.other, "Dr. B");
+  assert.equal(formatAddress({ address: "Rua A, 10", city: "Porto Alegre", state: "RS", zip: "90010000" }), "Rua A, 10, Porto Alegre - RS, CEP 90010-000");
+  // Centro até 12:00 e Bairro às 12:15: aviso de deslocamento; às 14:00, ok
+  assert.equal(tightUnitChanges({ "1": { periods: [{ start: "08:00", end: "12:00" }, { start: "12:15", end: "18:00", unitId: U2 }] } }, "MAIN").length, 1);
+  assert.equal(tightUnitChanges(week, "MAIN").length, 0);
 });

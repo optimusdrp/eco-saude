@@ -18,7 +18,7 @@ import {
   type DaySchedule,
   type WeeklySchedule,
 } from "@ecosaude/core/crm";
-import { CopyPlus, Plus, X } from "lucide-react";
+import { CopyPlus, MapPin, Plus, X } from "lucide-react";
 import { cn } from "@/components/ui/styles";
 
 type Key = keyof WeeklySchedule;
@@ -39,7 +39,32 @@ function fill(days: Key[], periods: [string, string][]): WeeklySchedule {
   return out;
 }
 
-export function WeekEditor({ value, onChange, slotMinutes, onSlotChange, idPrefix }: { value: WeeklySchedule; onChange: (w: WeeklySchedule) => void; slotMinutes: number; onSlotChange: (m: number) => void; idPrefix: string }) {
+/** Unidades e consultórios da clínica (para dizer ONDE o profissional atende em cada período) */
+export interface WeekPlaces {
+  units: { id: string; name: string; main: boolean }[];
+  rooms: { id: string; unitId: string; name: string }[];
+}
+
+export function WeekEditor({
+  value,
+  onChange,
+  slotMinutes,
+  onSlotChange,
+  idPrefix,
+  places,
+}: {
+  value: WeeklySchedule;
+  onChange: (w: WeeklySchedule) => void;
+  slotMinutes: number;
+  onSlotChange: (m: number) => void;
+  idPrefix: string;
+  places?: WeekPlaces;
+}) {
+  // Escolha de local só aparece quando faz diferença: mais de uma unidade ou consultórios cadastrados
+  const mainId = places?.units.find((u) => u.main)?.id ?? "";
+  const multiUnit = (places?.units.length ?? 0) > 1;
+  const hasRooms = (places?.rooms.length ?? 0) > 0;
+  const showPlaces = multiUnit || hasRooms;
   const issues = validateWeekly(value, slotMinutes);
   const cap = weeklyCapacity(value, slotMinutes);
 
@@ -140,6 +165,60 @@ export function WeekEditor({ value, onChange, slotMinutes, onSlotChange, idPrefi
                         onChange={(e) => setDay(k, { ...day, periods: day.periods.map((x, j) => (j === i ? { ...x, end: e.target.value } : x)) })}
                         className="min-h-10 w-[7.5rem] rounded-xl bg-paper px-2 ring-1 ring-line"
                       />
+                      {showPlaces ? (
+                        <span className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                          <MapPin className="size-4 shrink-0 text-ink-soft" aria-hidden />
+                          {multiUnit ? (
+                            <select
+                              aria-label={`${WEEKDAY_LONG[n]}, período ${i + 1}: unidade`}
+                              value={p.unitId ?? mainId}
+                              onChange={(e) =>
+                                setDay(k, {
+                                  ...day,
+                                  periods: day.periods.map((x, j) => {
+                                    if (j !== i) return x;
+                                    const unitId = e.target.value === mainId ? undefined : e.target.value;
+                                    // Consultório de outra unidade não faz sentido: limpa
+                                    const keepRoom = x.roomId && places!.rooms.find((r) => r.id === x.roomId)?.unitId === (unitId ?? mainId);
+                                    return { start: x.start, end: x.end, ...(unitId ? { unitId } : {}), ...(keepRoom ? { roomId: x.roomId } : {}) };
+                                  }),
+                                })
+                              }
+                              className="min-h-10 max-w-[12rem] rounded-xl bg-paper px-2 text-sm ring-1 ring-line"
+                            >
+                              {places!.units.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : null}
+                          {(() => {
+                            const rooms = places!.rooms.filter((r) => r.unitId === (p.unitId ?? mainId));
+                            if (!rooms.length) return null;
+                            return (
+                              <select
+                                aria-label={`${WEEKDAY_LONG[n]}, período ${i + 1}: consultório`}
+                                value={p.roomId ?? ""}
+                                onChange={(e) =>
+                                  setDay(k, {
+                                    ...day,
+                                    periods: day.periods.map((x, j) => (j !== i ? x : { start: x.start, end: x.end, ...(x.unitId ? { unitId: x.unitId } : {}), ...(e.target.value ? { roomId: e.target.value } : {}) })),
+                                  })
+                                }
+                                className="min-h-10 max-w-[12rem] rounded-xl bg-paper px-2 text-sm ring-1 ring-line"
+                              >
+                                <option value="">Qualquer consultório livre</option>
+                                {rooms.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
+                        </span>
+                      ) : null}
                       {day.periods.length > 1 ? (
                         <button type="button" onClick={() => setDay(k, { ...day, periods: day.periods.filter((_, j) => j !== i) })} className="inline-flex size-10 items-center justify-center rounded-xl text-ink-soft hover:bg-fog hover:text-alert" aria-label={`Tirar o período ${i + 1} de ${WEEKDAY_LONG[n]}`}>
                           <X className="size-4" aria-hidden />

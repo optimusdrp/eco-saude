@@ -116,7 +116,7 @@ export function SummaryBar({ s }: { s: SummaryState }) {
       <div className="flex items-start gap-2">
         <span
           className={cn("mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", ai ? "bg-crm text-white" : "bg-fog text-ink-soft ring-1 ring-line")}
-          title={ai ? `Resumo da IA${sum.model ? ` (${sum.model})` : ""}` : `Resumo automático pelas regras do CRM${sum.fallbackReason ? `: ${sum.fallbackReason}` : ""}`}
+          title={ai ? `Resumo da IA${sum.model ? ` (${sum.model})` : ""}` : `Resumo automático pelas regras do Tropi${sum.fallbackReason ? `: ${sum.fallbackReason}` : ""}`}
         >
           {ai ? <Sparkles className="size-3" aria-hidden /> : <Bot className="size-3" aria-hidden />}
           <span className="sr-only sm:not-sr-only">{ai ? "Resumo da IA" : "Resumo automático"}</span>
@@ -185,7 +185,7 @@ export function SummaryBar({ s }: { s: SummaryState }) {
             ) : null}
             <span className="inline-flex items-center gap-1">
               Ajudou?
-              <button type="button" onClick={() => rate(true)} aria-pressed={rated === true} aria-label="Ajudou" className={cn("inline-flex size-8 items-center justify-center rounded-lg hover:bg-paper", rated === true && "bg-pep-tint text-pep-ink")}>
+              <button type="button" onClick={() => rate(true)} aria-pressed={rated === true} aria-label="Ajudou" className={cn("inline-flex size-8 items-center justify-center rounded-lg hover:bg-paper", rated === true && "bg-ok-tint text-ok-ink")}>
                 <ThumbsUp className="size-3.5" aria-hidden />
               </button>
               <button type="button" onClick={() => rate(false)} aria-pressed={rated === false} aria-label="Não ajudou" className={cn("inline-flex size-8 items-center justify-center rounded-lg hover:bg-paper", rated === false && "bg-erp-tint text-erp-ink")}>

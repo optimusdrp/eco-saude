@@ -6,11 +6,13 @@ import type { ComponentPropsWithoutRef } from "react";
  * Exportamos a função (e não só o componente) para que links <a>
  * também possam ter aparência de botão: buttonStyles({ variant: "primary" }).
  */
-type Variant = "primary" | "secondary" | "ghost" | "light";
+/** sun = a ação principal da tela (no máximo uma visível por vez), laranja com texto grafite */
+type Variant = "primary" | "sun" | "secondary" | "ghost" | "light";
 type Size = "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-crm text-white hover:bg-[#5a37cf] active:bg-[#4d2cbd]",
+  primary: "bg-crm text-white hover:bg-crm-strong active:bg-night-soft",
+  sun: "bg-sun text-ink hover:bg-sun-strong",
   secondary: "bg-paper text-ink ring-1 ring-line hover:ring-ink/40",
   ghost: "text-ink hover:bg-ink/5",
   light: "bg-white text-night hover:bg-crm-tint",

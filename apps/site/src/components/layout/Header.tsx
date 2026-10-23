@@ -40,7 +40,7 @@ export function Header() {
       )}
     >
       <Container className="flex h-16 items-center justify-between gap-4">
-        <a href="#inicio" className="rounded-md" aria-label="EcoSaúde, voltar ao início" onClick={() => setOpen(false)}>
+        <a href="#inicio" className="rounded-md" aria-label="Tropi, voltar ao início" onClick={() => setOpen(false)}>
           <Logo />
         </a>
 

@@ -36,3 +36,8 @@ export * from "./service-audit";
 export * from "./privacy";
 export * from "./timezones";
 export * from "./attachments";
+export * from "./units";
+export * from "./arrival";
+export * from "./opening";
+export * from "./phone-echo";
+export * from "./pacing";

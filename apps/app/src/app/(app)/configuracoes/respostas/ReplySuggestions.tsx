@@ -48,7 +48,7 @@ export function ReplySuggestions({ items, lastRun }: { items: ReplySuggestionVie
         </form>
       </div>
       {mined.message ? (
-        <p role="status" className={cn("mt-2 text-sm", mined.ok ? "text-pep-ink" : "font-semibold text-alert")}>
+        <p role="status" className={cn("mt-2 text-sm", mined.ok ? "text-ok-ink" : "font-semibold text-alert")}>
           {mined.message}
         </p>
       ) : null}

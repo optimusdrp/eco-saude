@@ -2,14 +2,14 @@ import "server-only";
 import type { InboundMessage } from "@ecosaude/channels";
 import {
   CRM_FEATURES,
-  describeOpeningHours,
+  afterHoursText,
   detectIntent,
   detectUrgency,
   isAffirmative,
   isDecline,
   isOptIn,
   isOptOut,
-  isOpen,
+  openStatus,
   parseNpsScore,
   todayIso,
   utcToZoned,
@@ -17,11 +17,14 @@ import {
   type TemplateVariables,
   hasProfileCue,
 } from "@ecosaude/core/crm";
-import { and, desc, eq, gt, isNotNull, schema, sql, type Tx } from "@ecosaude/db";
+import { attachmentLabel, ECHO_WINDOW_MS, isEchoOf, PHONE_SOURCE, type AttachmentKind } from "@ecosaude/core/crm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, schema, sql, type Tx } from "@ecosaude/db";
 import { queueInboundAttachments } from "./files/attachments";
 import { isScheduleConflict } from "@/lib/server";
+import { placeFor, placeVars } from "./units";
+import { contactUnit, loadOpening } from "./opening";
 import { releaseOfferCandidates } from "./scheduling";
-import { logEvent, onInbound, onScheduled } from "./journey";
+import { logEvent, onAgentReply, onInbound, onScheduled } from "./journey";
 import { queueIntentReview } from "./ai/intent";
 import { queueAiJob } from "./ai/jobs";
 import { notePromiseCandidate } from "./ai/promises";
@@ -218,9 +221,17 @@ export async function ingestInbound(tx: Tx, scope: CrmScope, msg: InboundMessage
   /* 5. Boas-vindas e fora do horário (nunca em urgência: aí uma pessoa precisa responder) */
   if (!automation && !urgency.urgent && scope.has(CRM_FEATURES.inbox)) {
     const z = utcToZoned(msg.receivedAt);
-    const fh = auto.fora_horario;
-    const hours = fh ? { dias: fh.dias as number[], inicio: String(fh.inicio), fim: String(fh.fim) } : null;
-    if (fh?.enabled && hours && !isOpen(hours, z.weekday, z.minutes)) {
+    // Horário da UNIDADE DO PACIENTE (próxima consulta, senão a última, senão a principal):
+    // o WhatsApp é um número só para a clínica toda. Feriado/fechamento conta como fechado.
+    let closed: { text: string } | null = null;
+    if (auto.fora_horario?.enabled) {
+      const opening = await loadOpening(tx, z.date);
+      const unitId = (await contactUnit(tx, contactId, msg.receivedAt)) ?? opening.mainUnitId;
+      const hours = opening.hoursOf(unitId);
+      const status = openStatus({ hours, closures: opening.closures, unitId, date: z.date, weekday: z.weekday, minutes: z.minutes });
+      if (!status.open) closed = { text: afterHoursText(status, hours) };
+    }
+    if (closed) {
       // No máximo uma resposta "fora do horário" a cada 12h por conversa
       const [recent] = await tx
         .select({ id: schema.messages.id })
@@ -228,7 +239,7 @@ export async function ingestInbound(tx: Tx, scope: CrmScope, msg: InboundMessage
         .where(and(eq(schema.messages.conversationId, conv.id), eq(schema.messages.templateKey, "fora_horario"), gt(schema.messages.createdAt, new Date(msg.receivedAt.getTime() - 12 * 3_600_000))))
         .limit(1);
       if (!recent) {
-        await reply("fora_horario", "fora_horario", { horario_atendimento: describeOpeningHours(hours.dias, hours.inicio, hours.fim) });
+        await reply("fora_horario", "fora_horario", { horario_atendimento: closed.text });
         await logEvent(tx, { contactId, type: "after_hours_reply", data: { canal: msg.channel } });
       }
     } else if (auto.boas_vindas?.enabled && created) {
@@ -287,10 +298,12 @@ async function handleOfferReply(tx: Tx, scope: CrmScope, contact: Contact, text:
 
   // Tenta reservar. Savepoint: se outro paciente ganhou no mesmo instante, o banco recusa e só esta parte é desfeita.
   try {
+    const pro = await tx.query.professionals.findFirst({ where: eq(schema.professionals.id, offer.professionalId) });
+    const place = pro ? await placeFor(tx, pro, offer.startsAt, offer.endsAt) : { unitId: undefined, roomId: null };
     const appt = await tx.transaction(async (sp) => {
       const [created] = await sp
         .insert(schema.appointments)
-        .values({ contactId: contact.id, professionalId: offer.professionalId, startsAt: offer.startsAt, endsAt: offer.endsAt, source: "lista_espera", status: "confirmado", confirmedAt: new Date() })
+        .values({ contactId: contact.id, professionalId: offer.professionalId, ...place, startsAt: offer.startsAt, endsAt: offer.endsAt, source: "lista_espera", status: "confirmado", confirmedAt: new Date() })
         .returning({ id: schema.appointments.id });
       return created!;
     });
@@ -336,7 +349,7 @@ async function handleConfirmationReply(tx: Tx, scope: CrmScope, contact: Contact
     orderBy: (a, { asc }) => asc(a.startsAt),
   });
   if (!appt) return null;
-  const vars = templateVars(contact, scope.clinicName, { startsAt: appt.startsAt, professionalName: appt.professional.name });
+  const vars = templateVars(contact, scope.clinicName, { startsAt: appt.startsAt, professionalName: appt.professional.name }, await placeVars(tx, appt.unitId, appt.roomId));
 
   if (yes) {
     await tx
@@ -399,4 +412,126 @@ async function handleNpsReply(tx: Tx, contact: Contact, text: string, reply: Rep
     await reply("nps_obrigado", "nps", { link_avaliacao: link });
   }
   return "nps";
+}
+
+/* ===================== Mensagem enviada pelo celular da clínica ===================== */
+
+export type PhoneEchoResult =
+  | { recorded: true; contactId: string; conversationId: string; messageId: string }
+  | { recorded: false; reason: "ja_registrada" | "enviada_pelo_tropi" | "contato_desconhecido" };
+
+/**
+ * Registra em Conversas o que a equipe respondeu DIRETO no celular (WhatsApp por QR code).
+ *
+ * Decisão (23/10/2026): só para quem JÁ é contato no Tropi. Mensagem do celular para número
+ * desconhecido (fornecedor, família da equipe...) não vira cadastro (LGPD: só o necessário).
+ *
+ * O que faz, e o que NÃO faz, de propósito:
+ *  - grava como saída, status "enviada", sem autor, com meta.source = "celular";
+ *  - a conversa sai da fila "esperando resposta" (alguém respondeu);
+ *  - NÃO mexe na janela de 24h (lastInboundAt é só do paciente), NÃO dispara automações,
+ *    IA, "fora do horário" nem opt-out;
+ *  - NÃO duplica o que o próprio Tropi enviou: pelo ID externo ou, na corrida (o eco chega
+ *    antes de o Tropi gravar o ID), pela mensagem do Tropi que acabou de sair com o mesmo texto,
+ *    que então recebe o ID externo.
+ */
+export async function ingestPhoneEcho(tx: Tx, msg: InboundMessage): Promise<PhoneEchoResult> {
+  // 1. Já existe (o Tropi enviou e gravou o ID, ou a Evolution repetiu o aviso)
+  const [same] = await tx
+    .select({ id: schema.messages.id })
+    .from(schema.messages)
+    .where(and(eq(schema.messages.channel, msg.channel), eq(schema.messages.externalId, msg.externalMessageId)))
+    .limit(1);
+  if (same) return { recorded: false, reason: "ja_registrada" };
+
+  // 2. Só contato que já existe: pelo identificador do canal, senão pelo telefone
+  const [identity] = await tx
+    .select({ contactId: schema.contactIdentities.contactId })
+    .from(schema.contactIdentities)
+    .where(and(eq(schema.contactIdentities.channel, msg.channel), eq(schema.contactIdentities.externalId, msg.from.externalId)));
+  let contactId = identity?.contactId ?? null;
+  if (!contactId && msg.from.phone) {
+    const [byPhone] = await tx
+      .select({ id: schema.contacts.id })
+      .from(schema.contacts)
+      .where(and(eq(schema.contacts.phone, msg.from.phone), isNull(schema.contacts.anonymizedAt)))
+      .limit(1);
+    contactId = byPhone?.id ?? null;
+  }
+  if (!contactId) return { recorded: false, reason: "contato_desconhecido" };
+  if (!identity) await tx.insert(schema.contactIdentities).values({ contactId, channel: msg.channel, externalId: msg.from.externalId }).onConflictDoNothing();
+
+  await tx.insert(schema.conversations).values({ contactId, channel: msg.channel }).onConflictDoNothing();
+  const [conv] = await tx
+    .select()
+    .from(schema.conversations)
+    .where(and(eq(schema.conversations.contactId, contactId), eq(schema.conversations.channel, msg.channel)));
+  if (!conv) throw new Error("Falha ao abrir a conversa.");
+
+  // 3. Corrida: mensagem do Tropi que acabou de sair e ainda não tem o ID externo gravado
+  const recent = await tx
+    .select({
+      id: schema.messages.id,
+      body: schema.messages.body,
+      at: schema.messages.createdAt,
+      sentAt: schema.messages.sentAt,
+      kind: schema.messageAttachments.kind,
+      fileName: schema.messageAttachments.fileName,
+    })
+    .from(schema.messages)
+    .leftJoin(schema.messageAttachments, eq(schema.messageAttachments.messageId, schema.messages.id))
+    .where(
+      and(
+        eq(schema.messages.conversationId, conv.id),
+        eq(schema.messages.direction, "out"),
+        isNull(schema.messages.externalId),
+        inArray(schema.messages.status, ["fila", "enviada"]),
+        gt(schema.messages.createdAt, new Date(msg.receivedAt.getTime() - ECHO_WINDOW_MS)),
+      ),
+    )
+    .orderBy(desc(schema.messages.createdAt))
+    .limit(5);
+  // Anexo sem legenda: o eco traz o rótulo ("[imagem]"), o mesmo que o Tropi usa
+  const pending = recent.find((r) => isEchoOf({ text: msg.text, at: msg.receivedAt }, { body: r.body, at: r.sentAt ?? r.at, attachmentLabel: r.kind ? attachmentLabel(r.kind as AttachmentKind, r.fileName ?? undefined) : null }));
+  if (pending) {
+    await tx.update(schema.messages).set({ externalId: msg.externalMessageId }).where(and(eq(schema.messages.id, pending.id), isNull(schema.messages.externalId)));
+    return { recorded: false, reason: "enviada_pelo_tropi" };
+  }
+
+  // 4. Grava a mensagem do celular
+  const [stored] = await tx
+    .insert(schema.messages)
+    .values({
+      conversationId: conv.id,
+      channel: msg.channel,
+      direction: "out",
+      body: msg.text,
+      status: "enviada",
+      authorId: null,
+      externalId: msg.externalMessageId,
+      meta: { source: PHONE_SOURCE },
+      createdAt: msg.receivedAt,
+      sentAt: msg.receivedAt,
+    })
+    .onConflictDoNothing()
+    .returning({ id: schema.messages.id });
+  if (!stored) return { recorded: false, reason: "ja_registrada" };
+  if (msg.attachments?.length) await queueInboundAttachments(tx, stored.id, msg.attachments);
+
+  // 5. Alguém da equipe respondeu: sai da fila de espera. A janela de 24h NÃO muda.
+  await tx
+    .update(schema.conversations)
+    .set({
+      lastMessageAt: msg.receivedAt,
+      lastMessagePreview: msg.text.slice(0, 140),
+      awaitingReplySince: null,
+      unreadCount: 0,
+      status: "aguardando_paciente",
+      snoozedUntil: null,
+    })
+    .where(and(eq(schema.conversations.id, conv.id), sql`(${schema.conversations.lastMessageAt} is null or ${schema.conversations.lastMessageAt} <= ${msg.receivedAt})`));
+  await tx.update(schema.contacts).set({ lastInteractionAt: msg.receivedAt }).where(eq(schema.contacts.id, contactId));
+  await onAgentReply(tx, contactId, null);
+  await logEvent(tx, { contactId, type: "phone_reply", data: { canal: msg.channel } });
+  return { recorded: true, contactId, conversationId: conv.id, messageId: stored.id };
 }

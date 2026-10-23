@@ -18,7 +18,7 @@ export function EndSessions({ id, label }: { id?: string; label: string }) {
         <LogOut className="size-4" aria-hidden /> {label}
       </SubmitButton>
       {state.message ? (
-        <span role="status" className="text-xs font-semibold text-pep-ink">
+        <span role="status" className="text-xs font-semibold text-ok-ink">
           {state.message}
         </span>
       ) : null}

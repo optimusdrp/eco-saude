@@ -309,7 +309,7 @@ export function TestAi() {
         <Sparkles className={cn("size-4", pending && "animate-pulse")} aria-hidden /> {pending ? "Testando..." : "Testar a IA agora"}
       </button>
       {result ? (
-        <p role="status" className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-sm", result.ok ? "bg-pep-tint text-pep-ink" : "bg-erp-tint text-erp-ink")}>
+        <p role="status" className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-sm", result.ok ? "bg-ok-tint text-ok-ink" : "bg-erp-tint text-erp-ink")}>
           {result.message}
         </p>
       ) : null}
@@ -468,7 +468,7 @@ function RulesTab({
           <div className="rounded-2xl border border-dashed border-ink/20 p-6 text-center">
             <Bot className="mx-auto size-8 text-crm" aria-hidden />
             <p className="mt-2 font-semibold">Nenhuma regra ainda</p>
-            <p className="text-sm text-ink-soft">Comece por uma receita abaixo ou monte a sua: quando acontecer algo, o CRM faz o próximo passo sozinho.</p>
+            <p className="text-sm text-ink-soft">Comece por uma receita abaixo ou monte a sua: quando acontecer algo, o Tropi faz o próximo passo sozinho.</p>
           </div>
         ) : (
           <ul className="space-y-2">
@@ -495,7 +495,7 @@ function RulesTab({
         open={editing !== null}
         onClose={close}
         title={editing === "new" ? "Nova regra" : fromText ? "Revise a regra montada" : editing ? `Editar “${(editing as RuleView).name}”` : "Regra"}
-        description={fromText ? "Confira cada passo. A regra só é criada quando você clicar em “Criar e ligar regra”." : "Quando acontecer algo, se a situação for esta, o CRM faz o que você mandar."}
+        description={fromText ? "Confira cada passo. A regra só é criada quando você clicar em “Criar e ligar regra”." : "Quando acontecer algo, se a situação for esta, o Tropi faz o que você mandar."}
         wide
       >
         {editing ? (
@@ -646,7 +646,7 @@ function RecipeCard({ r }: { r: { id: string; title: string; why: string; exists
       <p className="mt-1 flex-1 text-sm text-ink-soft">{r.why}</p>
       <form action={action} className="mt-3 flex items-center justify-between gap-2">
         <input type="hidden" name="recipe" value={r.id} />
-        {r.exists ? <span className="text-xs font-semibold text-pep-ink">já está nas suas regras</span> : <span />}
+        {r.exists ? <span className="text-xs font-semibold text-ok-ink">já está nas suas regras</span> : <span />}
         <SubmitButton variant={r.exists ? "ghost" : "secondary"} pendingText="Criando...">
           {r.exists ? "Usar de novo" : "Usar esta receita"}
         </SubmitButton>
@@ -962,7 +962,7 @@ function FromTextSummary({ f }: { f: FromText }) {
       <p className="flex flex-wrap items-center gap-2">
         <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", f.source === "ia" ? "bg-crm text-white" : "bg-paper text-ink-soft ring-1 ring-line")}>
           {f.source === "ia" ? <Sparkles className="size-3" aria-hidden /> : <Bot className="size-3" aria-hidden />}
-          {f.source === "ia" ? "Montada pela IA" : "Montada pelas regras do CRM"}
+          {f.source === "ia" ? "Montada pela IA" : "Montada pelas regras do Tropi"}
         </span>
         {f.source === "regras" && f.reason ? <span className="text-xs text-ink-soft">sem IA: {f.reason}</span> : null}
       </p>
@@ -1095,7 +1095,7 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
 /* ================================= Histórico ================================= */
 
 const STATUS: Record<RunView["status"], { label: string; icon: typeof CheckCircle2; tone: string }> = {
-  feita: { label: "Feita", icon: CheckCircle2, tone: "text-pep-ink" },
+  feita: { label: "Feita", icon: CheckCircle2, tone: "text-ok-ink" },
   pendente: { label: "Na espera", icon: Clock, tone: "text-crm" },
   ignorada: { label: "Não rodou", icon: CircleSlash, tone: "text-ink-soft" },
   falhou: { label: "Falhou", icon: XCircle, tone: "text-alert" },

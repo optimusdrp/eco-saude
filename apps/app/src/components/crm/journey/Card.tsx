@@ -84,7 +84,7 @@ export function Card({
             </span>
           ) : null}
           {card.next ? (
-            <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-pep-ink">
+            <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-ok-ink">
               <CalendarCheck2 className="size-3.5" aria-hidden /> {card.next}
             </span>
           ) : null}

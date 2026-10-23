@@ -17,7 +17,7 @@ const toneClass: Record<Tone, string> = {
   pep: "bg-pep-tint text-pep-ink",
   bi: "bg-bi-tint text-bi",
   alert: "bg-alert-tint text-alert",
-  success: "bg-pep-tint text-pep-ink",
+  success: "bg-ok-tint text-ok-ink",
   warning: "bg-erp-tint text-erp-ink",
   dark: "bg-ink text-white",
 };
@@ -82,7 +82,7 @@ export function StageBadge({ stage }: { stage: JourneyStage }) {
 
 /* --------------------------------- Avatar ---------------------------------- */
 
-const avatarColors = ["bg-crm-tint text-crm", "bg-pep-tint text-pep-ink", "bg-bi-tint text-bi", "bg-erp-tint text-erp-ink"];
+const avatarColors = ["bg-crm-tint text-crm", "bg-ok-tint text-ok-ink", "bg-bi-tint text-bi", "bg-erp-tint text-erp-ink"];
 
 export function initials(name: string): string {
   const parts = name.replace(/^(dra?\.?|sr\.?|sra\.?)\s+/i, "").trim().split(/\s+/);
@@ -172,7 +172,7 @@ export function LockedFeature({ title, children }: { title: string; children: Re
       <p className="text-sm font-semibold text-crm">Não incluído no seu plano</p>
       <h2 className="mt-1 text-lg font-bold">{title}</h2>
       <div className="mt-1 max-w-xl text-ink-soft">{children}</div>
-      <p className="mt-3 text-sm text-ink-soft">Para liberar, fale com a equipe EcoSaúde ou com a gestão da clínica.</p>
+      <p className="mt-3 text-sm text-ink-soft">Para liberar, fale com a equipe Tropi ou com a gestão da clínica.</p>
     </div>
   );
 }

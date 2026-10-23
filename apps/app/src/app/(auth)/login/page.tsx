@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const user = await getCurrentUser();
   if (user) {
     const step = pendingStep(user);
-    redirect(step ? routeForStep(step) : "/hoje");
+    redirect(step ? routeForStep(step) : "/");
   }
   const { bloqueado, senha } = await searchParams;
   return (
@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </p>
       ) : null}
       {senha === "redefinida" ? (
-        <p role="status" className="mb-4 rounded-xl bg-pep-tint px-3 py-2 text-sm font-semibold text-pep-ink">
+        <p role="status" className="mb-4 rounded-xl bg-ok-tint px-3 py-2 text-sm font-semibold text-ok-ink">
           Senha alterada. Entre com a nova senha.
         </p>
       ) : null}

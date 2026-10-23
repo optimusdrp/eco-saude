@@ -1,5 +1,6 @@
 import {
   absenceOn,
+  closureOn,
   addDaysIso,
   clinicTimeZone,
   CRM_FEATURES,
@@ -30,6 +31,8 @@ import { automationSettings } from "@/modules/crm/automation-settings";
 import { absencesByProfessional, loadWorkSchedule } from "@/modules/crm/hours";
 import { returnsDue } from "@/modules/crm/returns";
 import { riskFor } from "@/modules/crm/risk";
+import { inUnits, listRooms, resolveUnitView, roomFilter, roomSlotBase } from "@/modules/crm/units";
+import { loadClosures } from "@/modules/crm/opening";
 
 export const metadata: Metadata = { title: "Hoje" };
 export const dynamic = "force-dynamic";
@@ -64,19 +67,22 @@ export default async function TodayPage() {
   };
 
   const data = await withTenant(ctx.user.clinicId, async (tx) => {
+    // Unidades do acesso da pessoa (recepção da Unidade Centro vê só o Centro)
+    const place = await resolveUnitView(tx, ctx.user.unitIds, null);
+    const rooms = (await listRooms(tx)).filter((r) => r.active);
     // Uma consulta por vez na mesma conexão (ver inSequence em @ecosaude/db)
     const [pros, todayAppts, tomorrowAppts, waiting, tasks, waitlist, birthdays, weekAppts, weekContacts, nps, createdContacts, createdAppts] = await inSequence([
       () => tx.select().from(schema.professionals).where(eq(schema.professionals.active, true)).orderBy(asc(schema.professionals.name)),
       () =>
         tx.query.appointments.findMany({
-          where: and(gte(schema.appointments.startsAt, todayRange.start), lt(schema.appointments.startsAt, todayRange.end), ne(schema.appointments.status, "cancelado")),
-          with: { contact: { columns: { id: true, name: true } }, professional: { columns: { name: true, color: true } } },
+          where: and(gte(schema.appointments.startsAt, todayRange.start), lt(schema.appointments.startsAt, todayRange.end), ne(schema.appointments.status, "cancelado"), inUnits(place.filter)),
+          with: { contact: { columns: { id: true, name: true } }, professional: { columns: { name: true, color: true } }, unit: { columns: { name: true } }, room: { columns: { name: true } } },
           orderBy: asc(schema.appointments.startsAt),
         }),
       () =>
         tx.query.appointments.findMany({
-          where: and(gte(schema.appointments.startsAt, tomorrowRange.start), lt(schema.appointments.startsAt, tomorrowRange.end), inArray(schema.appointments.status, ["agendado", "confirmado"])),
-          with: { contact: { columns: { id: true, name: true } }, professional: { columns: { name: true, color: true } } },
+          where: and(gte(schema.appointments.startsAt, tomorrowRange.start), lt(schema.appointments.startsAt, tomorrowRange.end), inArray(schema.appointments.status, ["agendado", "confirmado"]), inUnits(place.filter)),
+          with: { contact: { columns: { id: true, name: true } }, professional: { columns: { name: true, color: true } }, unit: { columns: { name: true } }, room: { columns: { name: true } } },
           orderBy: asc(schema.appointments.startsAt),
         }),
       () =>
@@ -188,10 +194,12 @@ export default async function TodayPage() {
         .from(schema.conversations)
         .where(and(eq(schema.conversations.status, "aberta"), lt(schema.conversations.awaitingReplySince, new Date(current.getTime() - 3_600_000))));
       const fits: DayFacts["fits"] = [];
+      // Só conta horário com consultório livre (mesma regra da marcação)
+      const roomBase = await roomSlotBase(tx, current, new Date(current.getTime() + 86_400_000));
       for (const p of pros) {
         // Horários ainda livres HOJE (a partir de agora), por período
         const busy = todayAppts.filter((a) => a.professionalId === p.id).map((a) => ({ startsAt: a.startsAt, endsAt: a.endsAt }));
-        const free = findFreeSlots({ schedule: await loadWorkSchedule(tx, p), busy, from: current, days: 1, limit: 60, minLeadMinutes: 30 }).filter((s) => utcToZoned(s.startsAt).date === today);
+        const free = findFreeSlots({ schedule: await loadWorkSchedule(tx, p), busy, from: current, days: 1, limit: 60, minLeadMinutes: 30, accept: roomFilter(roomBase, p).accept }).filter((s) => utcToZoned(s.startsAt).date === today);
         const manha = free.filter((s) => utcToZoned(s.startsAt).minutes < 12 * 60).length;
         if (manha) fits.push({ professional: p.name, period: "manhã", count: manha });
         if (free.length - manha) fits.push({ professional: p.name, period: "tarde", count: free.length - manha });
@@ -199,8 +207,12 @@ export default async function TodayPage() {
       briefExtra = { waitingOver1h: over?.n ?? 0, fits: fits.sort((a, b) => b.count - a.count).slice(0, 2) };
     }
     return {
+      place,
+      rooms,
       pros,
       absences,
+      // Feriados e fechamentos de hoje (somem os horários livres de quem atende na unidade fechada)
+      closuresToday: await loadClosures(tx, today, today),
       todayAppts,
       tomorrowAppts,
       waiting,
@@ -250,6 +262,10 @@ export default async function TodayPage() {
       time: z.time,
       endTime: ze.time,
       firstVisit: !data.attended.some((x) => x.contactId === a.contactId && x.startsAt < a.startsAt),
+      unitId: a.unitId,
+      unitName: data.place.multi && (data.place.filter?.length ?? 2) > 1 ? (a.unit?.name ?? null) : null,
+      roomId: a.roomId,
+      roomName: a.room?.name ?? null,
     };
   };
 
@@ -279,12 +295,18 @@ export default async function TodayPage() {
     dayStartMs: todayRange.start.getTime(),
     serverNowMs: current.getTime(),
     canEdit: ctx.can("agenda.editar"),
+    pep: ctx.entitlements.modules.includes("pep") && ctx.can("prontuario.atender"),
+    rooms: data.rooms.map((r) => ({ id: r.id, unitId: r.unitId, name: r.name })),
     features: has,
     perms: { cancel: ctx.can("agenda.cancelar"), confirm: ctx.can("agenda.confirmacoes"), waitlist: ctx.can("espera.gerir") },
     professionals: data.pros.map((p) => {
       // Horário de HOJE deste profissional (a semana pode variar por dia) e ausência por data
       const absence = absenceOn(data.absences.get(p.id), today);
-      const day = absence ? null : dayMinutes(weeklyOf(p), weekday, p.slotMinutes);
+      // Unidades em que atende hoje todas fechadas (feriado): o dia fica sem horários livres
+      const todayUnits = [...new Set((weeklyOf(p)[String(weekday) as keyof ReturnType<typeof weeklyOf>]?.periods ?? []).map((x) => x.unitId ?? data.place.mainId))];
+      const closed = todayUnits.length ? todayUnits.map((u) => closureOn(data.closuresToday, u, today)) : [];
+      const closure = closed.length && closed.every(Boolean) ? closed[0]! : null;
+      const day = absence || closure ? null : dayMinutes(weeklyOf(p), weekday, p.slotMinutes);
       return {
         id: p.id,
         name: p.name,
@@ -294,7 +316,7 @@ export default async function TodayPage() {
         periods: day?.periods ?? [],
         gaps: day?.gaps ?? [],
         slot: day?.slot ?? p.slotMinutes,
-        absentReason: absence ? absence.reason || "ausente" : undefined,
+        absentReason: absence ? absence.reason || "ausente" : closure ? `fechado (${closure.reason})` : undefined,
       };
     }),
     appointments: data.todayAppts.map(toView),
@@ -344,5 +366,19 @@ export default async function TodayPage() {
       })
     : null;
 
-  return <TodayBoard data={board} />;
+  // Feriado/fechamento hoje nas unidades que a pessoa vê: aviso no topo
+  const visible = data.place.filter ?? data.place.units.map((u) => u.id);
+  const closedToday = data.closuresToday
+    .filter((c) => c.unitId === null || visible.includes(c.unitId))
+    .map((c) => ({ reason: c.reason, unit: c.unitId ? (data.place.units.find((u) => u.id === c.unitId)?.name ?? null) : null }));
+  return (
+    <>
+      {closedToday.length ? (
+        <p role="status" className="mx-auto mb-3 max-w-7xl rounded-xl bg-erp-tint px-3 py-2 text-sm font-semibold text-erp-ink">
+          Hoje: {closedToday.map((c) => `${c.reason} (${c.unit ? `${c.unit} fechada` : "clínica fechada"})`).join("; ")}. Os horários de hoje não são oferecidos.
+        </p>
+      ) : null}
+      <TodayBoard data={board} />
+    </>
+  );
 }

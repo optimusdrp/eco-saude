@@ -10,3 +10,6 @@ next-env.d.ts
 .DS_Store
 .data/
 apps/app/.data/
+
+# Capturas do piloto do WhatsApp (sem dados pessoais, mas não vão para o Git: viram fixtures pelo script)
+.capturas-piloto/

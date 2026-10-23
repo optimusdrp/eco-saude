@@ -1,5 +1,5 @@
 import { SchemaGuard } from "@/components/SchemaGuard";
-import { automationConfig, CRM_FEATURES, type ClinicPermission } from "@ecosaude/core/crm";
+import { automationConfig, CHANNEL_LABEL, CRM_FEATURES, type ClinicPermission } from "@ecosaude/core/crm";
 import { MODULE_LABEL, MODULE_IDS } from "@ecosaude/core";
 import { and, asc, count, eq, isNotNull, isNull, lt, or, pendingMigrations, schema, withTenant } from "@ecosaude/db";
 import { AppShell, type ModuleItem, type NavItem } from "@/components/shell/AppShell";
@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const crm = ent.modules.includes("crm");
   const can = (p: ClinicPermission) => user.permissions.includes(p);
 
-  const { waiting, professionals, simulator, audit } = crm
+  const { waiting, professionals, simulator, audit, dropped } = crm
     ? await withTenant(user.clinicId, async (tx) => {
         const [w] = await tx
           .select({ n: count() })
@@ -37,12 +37,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .where(eq(schema.professionals.active, true))
           .orderBy(asc(schema.professionals.name));
         const [sim] = await tx.select({ n: count() }).from(schema.channelConnections).where(eq(schema.channelConnections.mode, "simulacao"));
+        // Canal real que CAIU (ex.: o celular saiu do WhatsApp Web): aviso em todas as telas
+        const down = await tx
+          .select({ channel: schema.channelConnections.channel })
+          .from(schema.channelConnections)
+          .where(and(eq(schema.channelConnections.mode, "real"), eq(schema.channelConnections.active, true), or(eq(schema.channelConnections.connectionState, "desconectado"), eq(schema.channelConnections.connectionState, "erro"))));
         // Auditoria de atendimento (Ajustes > IA): aparece no menu só se ligada
         const [st] = await tx.select({ automations: schema.crmSettings.automations }).from(schema.crmSettings).limit(1);
         const a = automationConfig(st?.automations).ia_auditoria;
-        return { waiting: w?.n ?? 0, professionals: pros, simulator: (sim?.n ?? 0) > 0, audit: { on: a?.enabled === true, own: a?.mostrarParaAtendente !== false } };
+        return { waiting: w?.n ?? 0, professionals: pros, simulator: (sim?.n ?? 0) > 0, audit: { on: a?.enabled === true, own: a?.mostrarParaAtendente !== false }, dropped: down.map((d) => CHANNEL_LABEL[d.channel]) };
       })
-    : { waiting: 0, professionals: [], simulator: false, audit: { on: false, own: false } };
+    : { waiting: 0, professionals: [], simulator: false, audit: { on: false, own: false }, dropped: [] as string[] };
 
   const nav: NavItem[] = [];
   if (crm) {
@@ -56,12 +61,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (can("tarefas.ver")) nav.push({ href: "/crm/tarefas", label: "Tarefas", icon: "tarefas" });
     if (audit.on && (can("qualidade.ver") || (audit.own && can("conversas.responder")))) nav.push({ href: "/crm/qualidade", label: "Qualidade", icon: "qualidade" });
   }
+  // Prontuário: Consultório (o dia do profissional) e Prontuário (busca, fichas, modelos e ajustes).
+  // Para o profissional de saúde, o Consultório é o primeiro item (e a tela inicial).
+  if (ent.modules.includes("pep")) {
+    const pepItems: NavItem[] = [];
+    if (can("prontuario.consultorio")) pepItems.push({ href: "/consultorio", label: "Consultório", icon: "consultorio", primary: true });
+    if (can("prontuario.ver") || can("prontuario.resumo") || can("prontuario.documentos") || can("prontuario.modelos"))
+      pepItems.push({ href: can("prontuario.ver") || can("prontuario.resumo") || can("prontuario.documentos") ? "/prontuario" : "/prontuario/modelos", label: "Prontuário", icon: "prontuario", primary: user.healthProfessional || !crm });
+    nav.splice(user.healthProfessional || !crm ? 0 : Math.min(3, nav.length), 0, ...pepItems);
+  }
   nav.push({ href: "/configuracoes", label: "Ajustes", icon: "config" });
 
   const modules: ModuleItem[] = MODULE_IDS.map((id) => ({ id, label: MODULE_LABEL[id], enabled: ent.modules.includes(id) }));
 
   return (
-    <AppShell user={{ name: user.name, roleLabel: user.roleName }} clinicName={user.clinicName} nav={nav} modules={modules} professionals={professionals} simulator={simulator && can("conversas.ver")}>
+    <AppShell user={{ name: user.name, roleLabel: user.roleName }} clinicName={user.clinicName} nav={nav} modules={modules} professionals={professionals} simulator={simulator && can("conversas.ver")}
+      channelAlert={dropped.length ? { channels: dropped, canFix: can("config.canais") } : null}
+    >
       {children}
     </AppShell>
   );

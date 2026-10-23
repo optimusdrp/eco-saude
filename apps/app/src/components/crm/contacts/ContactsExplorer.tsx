@@ -125,7 +125,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
 
   /* ------------------------------ Filtros ativos ------------------------------ */
   const pills: { key: string; label: string }[] = [];
-  if (p.tipo) pills.push({ key: "tipo", label: p.tipo === "lead" ? "Leads" : "Pacientes" });
+  if (p.tipo) pills.push({ key: "tipo", label: p.tipo === "lead" ? "Interessados" : "Pacientes" });
   if (p.etapa) pills.push({ key: "etapa", label: JOURNEY_STAGE_LABEL[p.etapa as JourneyStage] ?? p.etapa });
   if (p.segmento) pills.push({ key: "segmento", label: data.segments[p.segmento]?.label ?? p.segmento });
   if (p.canal) pills.push({ key: "canal", label: CHANNEL_LABEL[p.canal as keyof typeof CHANNEL_LABEL] ?? p.canal });
@@ -142,7 +142,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
     <>
       <PageHeader
         title="Contatos"
-        description="Leads e pacientes num lugar só. Clique no nome para ver o resumo sem sair da lista."
+        description="Interessados e pacientes num lugar só. Clique no nome para ver o resumo sem sair da lista."
         actions={
           <>
             {data.canEdit ? (
@@ -184,21 +184,21 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
               )}
               style={{ flexGrow: Math.max(st.leads, 1) }}
             >
-              Leads <span className="tabular">{st.leads}</span>
+              Interessados <span className="tabular">{st.leads}</span>
             </Link>
             <Link
               href={href({ tipo: p.tipo === "paciente" ? undefined : "paciente" })}
               aria-current={p.tipo === "paciente" ? "true" : undefined}
               className={cn(
                 "flex min-w-[7.5rem] items-center justify-between gap-2 px-3 text-sm font-semibold transition",
-                p.tipo === "paciente" ? "bg-pep text-white" : "bg-pep-tint text-pep-ink hover:brightness-95",
+                p.tipo === "paciente" ? "bg-ok text-white" : "bg-ok-tint text-ok-ink hover:brightness-95",
               )}
               style={{ flexGrow: Math.max(st.pacientes, 1) }}
             >
               Pacientes <span className="tabular">{st.pacientes}</span>
             </Link>
           </div>
-          <p className="mt-1.5 text-xs text-ink-soft">Paciente é quem já foi atendido ao menos uma vez; lead é quem ainda não foi.</p>
+          <p className="mt-1.5 text-xs text-ink-soft">Paciente é quem já foi atendido ao menos uma vez; interessado é quem ainda não foi (o pedido de orçamento, a primeira mensagem).</p>
         </div>
         <dl className="grid grid-cols-3 gap-2">
           <Stat href={href({ segmento: p.segmento === "novos" ? undefined : "novos" })} active={p.segmento === "novos"} label="Novos em 30 dias" value={String(st.novos30)} />
@@ -725,7 +725,7 @@ function Stat({ href, active, label, value }: { href: string; active: boolean; l
 }
 
 function KindBadge({ kind }: { kind: ContactRow["kind"] }) {
-  return kind === "paciente" ? <Badge tone="success">Paciente</Badge> : <Badge tone="crm">Lead</Badge>;
+  return kind === "paciente" ? <Badge tone="success">Paciente</Badge> : <Badge tone="crm">Interessado</Badge>;
 }
 
 function Flags({ r }: { r: ContactRow }) {
@@ -833,7 +833,7 @@ function RowActions({ r, canSchedule, compact = false }: { r: ContactRow; canSch
           aria-label={`Copiar celular de ${r.name}`}
           title={copied ? "Copiado" : "Copiar celular"}
         >
-          {copied ? <Check className="size-4 text-pep" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+          {copied ? <Check className="size-4 text-ok" aria-hidden /> : <Copy className="size-4" aria-hidden />}
         </button>
       ) : compact ? null : (
         <span className="size-9" aria-hidden />

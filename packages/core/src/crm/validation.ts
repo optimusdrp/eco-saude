@@ -1,6 +1,7 @@
 /**
- * Validações dos formulários do CRM (usadas no navegador E no servidor).
+ * Validações dos formulários do Tropi (usadas no navegador E no servidor).
  */
+import { ROOM_KINDS } from "./units";
 import { z } from "zod";
 import { passwordSchema } from "../validation/index";
 import { APPOINTMENT_STATUSES, CHANNELS, CLINIC_ROLES, JOURNEY_STAGES, WAITLIST_PERIODS } from "./constants";
@@ -23,11 +24,34 @@ export const phoneSchema = z
   .refine((v) => v === "" || (v.length >= 10 && v.length <= 13), "Telefone inválido. Use DDD + número.")
   .transform((v) => (v === "" ? undefined : v.length <= 11 ? `55${v}` : v));
 
+/** CPF válido (dígitos verificadores). Aceita com ou sem pontuação; vazio = não informado. */
+export function isValidCpf(value: string): boolean {
+  const d = value.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const digit = (len: number) => {
+    let sum = 0;
+    for (let i = 0; i < len; i++) sum += Number(d[i]) * (len + 1 - i);
+    const r = (sum * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  return digit(9) === Number(d[9]) && digit(10) === Number(d[10]);
+}
+
+export const cpfSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\D/g, ""))
+  .refine((v) => v === "" || isValidCpf(v), "CPF inválido.")
+  .transform((v) => v || undefined);
+
 export const contactSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome.").max(120),
   phone: phoneSchema,
   email: z.union([z.email("E-mail inválido."), z.literal("")]).transform((v) => v || undefined),
   birthDate: z.union([z.iso.date({ error: "Data inválida." }), z.literal("")]).transform((v) => v || undefined),
+  /** Sexo biológico (define a referência dos exames) e CPF: opcionais */
+  sex: z.union([z.enum(["F", "M"]), z.literal("")]).optional().transform((v) => v || undefined),
+  cpf: cpfSchema.optional(),
   preferredChannel: z.union([z.enum(CHANNELS), z.literal("")]).transform((v) => v || undefined),
   source: optionalText(60),
   tags: z
@@ -121,6 +145,8 @@ export const appointmentDetailsSchema = z.object({
   service: optionalText(80),
   notes: optionalText(500),
   durationMinutes: durationField,
+  /** Consultório: id, "" = sem consultório, ausente = não muda */
+  roomId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 /* ------------------------------ Profissionais ------------------------------ */
@@ -130,7 +156,7 @@ const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use o formato 08:00.
 export const PROFESSIONAL_COLORS = ["crm", "erp", "pep", "bi"] as const;
 
 /** Semana de atendimento (JSON vindo do editor de horários do profissional). */
-const periodSchema = z.object({ start: hhmm, end: hhmm });
+const periodSchema = z.object({ start: hhmm, end: hhmm, unitId: z.uuid().optional(), roomId: z.uuid().optional() });
 const daySchema = z.object({
   periods: z.array(periodSchema).max(4),
   slotMinutes: z.coerce.number().int().min(5).max(240).optional(),
@@ -145,6 +171,29 @@ export const professionalSchema = z
       .transform((v) => v || undefined),
     name: z.string().trim().min(2, "Informe o nome.").max(120),
     specialty: optionalText(80),
+    /** Conselho profissional (CRM, CRO, CRBM...), número e UF: vão no pedido de exame e no laudo assinado */
+    council: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .max(10)
+      .refine((v) => v === "" || /^[A-Z]{2,8}$/.test(v), "Use a sigla do conselho (ex.: CRM, CRO, CRBM).")
+      .transform((v) => v || undefined)
+      .optional(),
+    councilNumber: z
+      .string()
+      .trim()
+      .max(20)
+      .refine((v) => v === "" || /^[0-9A-Za-z.-]+$/.test(v), "Número do registro inválido.")
+      .transform((v) => v || undefined)
+      .optional(),
+    councilUf: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((v) => v === "" || /^[A-Z]{2}$/.test(v), "UF com 2 letras.")
+      .transform((v) => v || undefined)
+      .optional(),
     color: z.enum(PROFESSIONAL_COLORS),
     /** Duração padrão da consulta (cada dia pode ter a sua) */
     slotMinutes: z.coerce.number().int().min(5, "Mínimo de 5 minutos.").max(240, "Máximo de 4 horas."),
@@ -171,6 +220,58 @@ export const professionalSchema = z
     for (const message of validateWeekly(d.weeklySchedule as WeeklySchedule, d.slotMinutes)) ctx.addIssue({ code: "custom", path: ["weeklySchedule"], message });
   });
 
+/* -------------------------- Unidades e consultórios -------------------------- */
+
+const ufField = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .refine((v) => v === "" || /^[A-Z]{2}$/.test(v), "UF com 2 letras.")
+  .transform((v) => v || undefined)
+  .optional();
+
+/** Unidade de atendimento (endereço onde a clínica atende) */
+export const unitSchema = z.object({
+  id: z
+    .union([z.uuid(), z.literal("")])
+    .optional()
+    .transform((v) => v || undefined),
+  name: z.string().trim().min(2, "Informe o nome (ex.: Unidade Centro).").max(80),
+  address: optionalText(200),
+  district: optionalText(80),
+  city: optionalText(80),
+  state: ufField,
+  zip: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => v === "" || v.length === 8, "CEP com 8 números.")
+    .transform((v) => v || undefined)
+    .optional(),
+  phone: optionalText(30),
+  /** Cadastro Nacional de Estabelecimentos de Saúde (7 números): vai nos documentos */
+  cnes: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d{7}$/.test(v), "CNES com 7 números.")
+    .transform((v) => v || undefined)
+    .optional(),
+  active: z.boolean(),
+});
+
+/** Consultório ou sala de uma unidade */
+export const roomSchema = z.object({
+  id: z
+    .union([z.uuid(), z.literal("")])
+    .optional()
+    .transform((v) => v || undefined),
+  unitId: z.uuid("Escolha a unidade."),
+  name: z.string().trim().min(1, "Informe o nome (ex.: Consultório 1).").max(60),
+  kind: z.enum(ROOM_KINDS),
+  notes: optionalText(200),
+  active: z.boolean(),
+});
+
 /** Ausência do profissional (férias, congresso, folga): sem horários livres nesses dias. */
 export const absenceSchema = z
   .object({
@@ -181,7 +282,7 @@ export const absenceSchema = z
   })
   .refine((d) => d.endsOn >= d.startsOn, { path: ["endsOn"], message: "O fim precisa ser no mesmo dia ou depois do início." });
 
-/* ------------------------- Preferências do CRM ----------------------------- */
+/* ------------------------- Preferências do Tropi ----------------------------- */
 
 export const crmSettingsSchema = z.object({
   autoConfirm: z.boolean(),
@@ -198,6 +299,11 @@ export const startConversationSchema = z.object({
 export const waitlistSchema = z.object({
   contactId: z.uuid({ error: "Escolha o paciente." }),
   professionalId: z
+    .union([z.uuid(), z.literal("")])
+    .optional()
+    .transform((v) => v || undefined),
+  /** Unidade em que o paciente aceita ser atendido (vazio = qualquer) */
+  unitId: z
     .union([z.uuid(), z.literal("")])
     .optional()
     .transform((v) => v || undefined),

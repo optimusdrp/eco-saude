@@ -3,8 +3,9 @@ import { asc, db, eq, inSequence, schema, withTenant } from "@ecosaude/db";
 import type { Metadata } from "next";
 import { Badge, colorOf, EmptyState, PageHeader, Panel } from "@/components/ui/server";
 import { cn } from "@/components/ui/styles";
-import { requireCrm } from "@/lib/auth/dal";
+import { requireClinic } from "@/lib/auth/dal";
 import { absencesByProfessional } from "@/modules/crm/hours";
+import { listRooms, listUnits } from "@/modules/crm/units";
 import { ClinicProfileForm, ProfessionalButton } from "../forms";
 import { AbsenceButton, DeleteAbsence } from "./AbsenceTools";
 
@@ -26,9 +27,11 @@ const dateBR = (iso: string) => iso.split("-").reverse().slice(0, 2).join("/");
  *  - dados da clínica (nome que aparece nas mensagens, telefone, cidade)
  */
 export default async function ClinicSettingsPage() {
-  const ctx = await requireCrm("config.clinica");
+  const ctx = await requireClinic("config.clinica");
   const clinic = await db.query.clinics.findFirst({ where: eq(schema.clinics.id, ctx.user.clinicId) });
-  const { pros, users, absences } = await withTenant(ctx.user.clinicId, async (tx) => {
+  const { pros, users, absences, units, rooms } = await withTenant(ctx.user.clinicId, async (tx) => {
+    const units = (await listUnits(tx)).filter((u) => u.active);
+    const rooms = (await listRooms(tx)).filter((r) => r.active && units.some((u) => u.id === r.unitId));
     const [pros, users] = await inSequence([
       () => tx.select().from(schema.professionals).orderBy(asc(schema.professionals.name)),
       () => tx.select({ id: schema.clinicUsers.id, name: schema.clinicUsers.name }).from(schema.clinicUsers).where(eq(schema.clinicUsers.active, true)).orderBy(asc(schema.clinicUsers.name)),
@@ -36,9 +39,15 @@ export default async function ClinicSettingsPage() {
     const ids = pros.map((p) => p.id);
     // Ausências cadastradas (com id, para remover) a partir de hoje
     const rows = ids.length ? await tx.select().from(schema.professionalAbsences).orderBy(asc(schema.professionalAbsences.startsOn)) : [];
-    return { pros, users, absences: { rows: rows.filter((r) => r.endsOn >= todayIso()), map: await absencesByProfessional(tx, ids) } };
+    return { pros, users, units, rooms, absences: { rows: rows.filter((r) => r.endsOn >= todayIso()), map: await absencesByProfessional(tx, ids) } };
   });
   const userName = new Map(users.map((u) => [u.id, u.name]));
+  // Locais para o editor da semana (unidade e consultório por período)
+  const places = { units: units.map((u) => ({ id: u.id, name: u.name, main: u.main })), rooms: rooms.map((r) => ({ id: r.id, unitId: r.unitId, name: r.name })) };
+  const mainId = units.find((u) => u.main)?.id ?? "";
+  const unitName = new Map(units.map((u) => [u.id, u.name]));
+  const roomName = new Map(rooms.map((r) => [r.id, r.name]));
+  const multiUnit = units.length > 1;
   const active = pros.filter((p) => p.active);
   const proName = new Map(pros.map((p) => [p.id, p.name]));
 
@@ -68,7 +77,7 @@ export default async function ClinicSettingsPage() {
         actions={
           <>
             {active.length ? <AbsenceButton professionals={active.map((p) => ({ id: p.id, name: p.name }))} /> : null}
-            <ProfessionalButton users={users} />
+            <ProfessionalButton users={users} places={places} />
           </>
         }
       />
@@ -121,11 +130,19 @@ export default async function ClinicSettingsPage() {
                           <td key={d} className="px-1 py-2 align-top">
                             {day ? (
                               <span className={cn("block space-y-0.5 rounded-lg border-l-4 px-1.5 py-1 text-center text-xs leading-tight", colorOf(p.color).soft, colorOf(p.color).border)}>
-                                {day.periods.map((x) => (
-                                  <span key={x.start} className="block font-semibold tabular">
-                                    {toHHMM(x.start)}–{toHHMM(x.end)}
-                                  </span>
-                                ))}
+                                {day.periods.map((x) => {
+                                  // Onde atende neste período (só aparece se a clínica tem mais de uma unidade ou consultórios)
+                                  const raw = week[String(d) as keyof typeof week]?.periods.find((r) => r.start === toHHMM(x.start));
+                                  const where = [multiUnit ? unitName.get(raw?.unitId ?? mainId) : null, raw?.roomId ? roomName.get(raw.roomId) : null].filter(Boolean).join(", ");
+                                  return (
+                                    <span key={x.start} className="block">
+                                      <span className="block font-semibold tabular">
+                                        {toHHMM(x.start)}–{toHHMM(x.end)}
+                                      </span>
+                                      {where ? <span className="block truncate text-[0.68rem] text-ink-soft">{where}</span> : null}
+                                    </span>
+                                  );
+                                })}
                                 {day.slot !== p.slotMinutes ? <span className="block text-[0.68rem] text-ink-soft">{day.slot} min</span> : null}
                               </span>
                             ) : (
@@ -211,10 +228,14 @@ export default async function ClinicSettingsPage() {
                     </div>
                     <ProfessionalButton
                       users={users}
+                      places={places}
                       initial={{
                         id: p.id,
                         name: p.name,
                         specialty: p.specialty ?? "",
+                        council: p.council ?? "",
+                        councilNumber: p.councilNumber ?? "",
+                        councilUf: p.councilUf ?? "",
                         color: p.color,
                         slotMinutes: p.slotMinutes,
                         weeklySchedule: week,

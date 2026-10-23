@@ -537,7 +537,7 @@ function Kpi({ on, onClick, label, value, tone }: { on: boolean; onClick: () => 
   return (
     <button type="button" aria-pressed={on} onClick={onClick} className={cn("rounded-2xl px-4 py-3 text-left ring-1", on ? "bg-ink text-white ring-ink" : "bg-paper ring-line hover:ring-crm")}>
       <span className={cn("block text-sm", on ? "text-white/80" : "text-ink-soft")}>{label}</span>
-      <span className={cn("block font-display text-3xl font-bold tabular", !on && tone === "alert" && value > 0 && "text-alert", !on && tone === "success" && "text-pep-ink")}>{value}</span>
+      <span className={cn("block font-display text-3xl font-bold tabular", !on && tone === "alert" && value > 0 && "text-alert", !on && tone === "success" && "text-ok-ink")}>{value}</span>
     </button>
   );
 }

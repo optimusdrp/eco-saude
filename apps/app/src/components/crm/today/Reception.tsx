@@ -162,6 +162,7 @@ function Row({
           <span className="block truncate text-sm text-ink-soft">
             {a.professionalName}
             {a.service ? `, ${a.service}` : ""}
+            {a.unitName || a.roomName ? `, ${[a.unitName, a.roomName].filter(Boolean).join(", ")}` : ""}
             {hints.length ? `. ${hints.join("; ")}` : ""}
           </span>
         </span>

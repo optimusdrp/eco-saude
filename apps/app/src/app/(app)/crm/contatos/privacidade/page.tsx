@@ -33,6 +33,7 @@ const RESULT_LABEL: Record<string, string> = {
   anexos: "anexos (arquivos)",
   conversas: "conversas",
   leituras_ia: "leituras da IA",
+  avisos: "avisos da equipe",
   tarefas: "tarefas",
   consultas: "consultas (só observações)",
   eventos: "registros da linha do tempo",
@@ -106,7 +107,7 @@ export default async function PrivacyRequestsPage() {
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>A recepção registra o pedido na ficha; a gestão confere a identidade e apaga, ou recusa por um motivo da lista.</li>
           <li>Apagar é definitivo: nome, contatos, mensagens, anotações e leituras da IA somem. Ficam números sem identificação para os relatórios.</li>
-          <li>O prontuário não é apagado pelo CRM: a lei obriga a guardá-lo por 20 anos.</li>
+          <li>O prontuário não é apagado pelo Tropi: a lei obriga a guardá-lo por 20 anos.</li>
           <li>Este registro não guarda nome nem telefone, só um código que permite conferir depois se um número já pediu exclusão.</li>
           <li>Responda o paciente pelo mesmo canal do pedido, informando o protocolo.</li>
         </ul>

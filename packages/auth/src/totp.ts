@@ -7,8 +7,8 @@ import QRCode from "qrcode";
  * (Google Authenticator, Microsoft Authenticator, 1Password...).
  * Padrão TOTP: um código de 6 números que muda a cada 30 segundos.
  *
- * `issuer` é o nome que aparece no aplicativo (ex.: "EcoSaúde Backoffice",
- * "EcoSaúde Clínica"), para a pessoa saber qual código é de qual sistema.
+ * `issuer` é o nome que aparece no aplicativo (ex.: "Tropi Backoffice",
+ * "Tropi"), para a pessoa saber qual código é de qual sistema.
  */
 const PERIOD = 30;
 
@@ -32,7 +32,7 @@ export async function totpQrCode(secret: string, email: string, issuer: string):
  * reaproveitado) ou null se inválido. O issuer não entra no cálculo do código.
  */
 export function verifyTotp(secret: string, email: string, code: string, lastStep: number | null): number | null {
-  const totp = totpFor(secret, email, "EcoSaúde");
+  const totp = totpFor(secret, email, "Tropi");
   const delta = totp.validate({ token: code.replace(/\s/g, ""), window: 2 });
   if (delta === null) return null;
   const step = Math.floor(Date.now() / 1000 / PERIOD) + delta;

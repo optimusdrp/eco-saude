@@ -7,7 +7,7 @@
 import { cn } from "@/components/ui/styles";
 import type { FunnelStep, JourneyData } from "./types";
 
-const tone = ["bg-crm", "bg-bi", "bg-erp", "bg-pep"];
+const tone = ["bg-crm", "bg-bi", "bg-erp", "bg-ok"];
 
 export function Funnel({ steps, lostReasons, lossGroups }: { steps: FunnelStep[]; lostReasons: { reason: string; n: number }[]; lossGroups?: JourneyData["lossGroups"] }) {
   const top = steps[0]?.value ?? 0;

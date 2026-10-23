@@ -19,6 +19,8 @@ interface Slot {
   date: string;
   time: string;
   label: string;
+  /** Consultório sugerido (mostrado ao passar o mouse e lido pelo leitor de tela) */
+  room?: string | null;
 }
 
 export function RescheduleForm({
@@ -118,6 +120,8 @@ export function RescheduleForm({
                         type="button"
                         aria-pressed={on}
                         onClick={() => setPicked({ date: s.date, time: s.time })}
+                        title={s.room ?? undefined}
+                        aria-label={s.room ? `${s.time}, ${s.room}` : undefined}
                         className={cn("min-h-10 rounded-full px-3 text-sm font-semibold ring-1", on ? "bg-crm text-white ring-crm" : "bg-paper ring-line hover:ring-crm")}
                       >
                         {s.time}

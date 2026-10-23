@@ -60,6 +60,13 @@ export interface TeamAccess {
   grants: string[];
   revokes: string[];
   permissions: ClinicPermission[];
+  /** Perfil de profissional de saúde (registro no próprio acesso ou profissional da agenda ligado) */
+  healthProfessional: boolean;
+  health: { council: string | null; number: string | null; uf: string | null };
+  /** Profissional da agenda ligado ao acesso, com o registro dele (se houver) */
+  linkedProfessional: { name: string; council: string | null } | null;
+  /** Unidades em que trabalha (vazio = todas) */
+  unitIds: string[];
 }
 
 /** Perfil efetivo de uma pessoa: o escolhido ou o do sistema do mesmo nível. */
@@ -78,11 +85,22 @@ export async function teamAccess(tx: Tx, roles?: RoleRow[]): Promise<TeamAccess[
       roleId: schema.clinicUsers.roleId,
       grants: schema.clinicUsers.permissionGrants,
       revokes: schema.clinicUsers.permissionRevokes,
+      healthCouncil: schema.clinicUsers.healthCouncil,
+      healthCouncilNumber: schema.clinicUsers.healthCouncilNumber,
+      healthCouncilUf: schema.clinicUsers.healthCouncilUf,
+      unitIds: schema.clinicUsers.unitIds,
     })
     .from(schema.clinicUsers)
     .orderBy(asc(schema.clinicUsers.name));
+  const pros = await tx
+    .select({ userId: schema.professionals.userId, name: schema.professionals.name, council: schema.professionals.council, number: schema.professionals.councilNumber, uf: schema.professionals.councilUf })
+    .from(schema.professionals)
+    .where(eq(schema.professionals.active, true));
   return users.map((u) => {
     const role = roleFor(u, allRoles);
+    const pro = pros.find((p) => p.userId === u.id);
+    const proHasCouncil = !!pro?.council && !!pro.number;
+    const healthProfessional = (!!u.healthCouncil && !!u.healthCouncilNumber) || proHasCouncil;
     return {
       id: u.id,
       name: u.name,
@@ -92,7 +110,11 @@ export async function teamAccess(tx: Tx, roles?: RoleRow[]): Promise<TeamAccess[
       roleName: role?.name ?? CLINIC_ROLE_LABEL[u.role],
       grants: u.grants,
       revokes: u.revokes,
-      permissions: effectivePermissions({ rolePermissions: role?.permissions, baseRole: u.role, grants: u.grants, revokes: u.revokes }),
+      permissions: effectivePermissions({ rolePermissions: role?.permissions, baseRole: u.role, grants: u.grants, revokes: u.revokes, healthProfessional }),
+      healthProfessional,
+      health: { council: u.healthCouncil, number: u.healthCouncilNumber, uf: u.healthCouncilUf },
+      unitIds: u.unitIds,
+      linkedProfessional: pro ? { name: pro.name, council: proHasCouncil ? `${pro.council}${pro.uf ? `-${pro.uf}` : ""} ${pro.number}` : null } : null,
     };
   });
 }

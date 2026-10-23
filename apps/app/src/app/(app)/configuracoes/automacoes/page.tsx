@@ -132,7 +132,7 @@ export default async function AutomationsPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="Automações" description="O que o CRM faz sozinho para a equipe não precisar lembrar. Ligue, desligue, ajuste e crie as suas próprias regras." />
+      <PageHeader title="Automações" description="O que o Tropi faz sozinho para a equipe não precisar lembrar. Ligue, desligue, ajuste e crie as suas próprias regras." />
       <AutomationsWorkspace
         initialTab={aba === "regras" || aba === "historico" ? aba : "sistema"}
         builtins={builtins}

@@ -25,7 +25,7 @@ import {
 } from "../scheduling";
 
 /**
- * Ações da agenda. Padrão de todas as actions do CRM:
+ * Ações da agenda. Padrão de todas as actions do Tropi:
  *  1. authorizeCrm(permissão, funcionalidade) -> sem acesso, para aqui
  *  2. validar com zod (o navegador pode ser burlado; o servidor não)
  *  3. runCrm: transação isolada na clínica + despacho das mensagens
@@ -181,6 +181,7 @@ export async function addToWaitlistAction(_prev: ActionState, form: FormData): P
   const parsed = waitlistSchema.safeParse({
     contactId: field(form, "contactId"),
     professionalId: field(form, "professionalId"),
+    unitId: field(form, "unitId"),
     period: field(form, "period") || "qualquer",
     notes: field(form, "notes"),
   });
@@ -194,13 +195,14 @@ export async function addToWaitlistAction(_prev: ActionState, form: FormData): P
     if (existing) {
       await tx
         .update(schema.waitlistEntries)
-        .set({ professionalId: parsed.data.professionalId ?? null, period: parsed.data.period, notes: parsed.data.notes ?? null })
+        .set({ professionalId: parsed.data.professionalId ?? null, unitId: parsed.data.unitId ?? null, period: parsed.data.period, notes: parsed.data.notes ?? null })
         .where(eq(schema.waitlistEntries.id, existing.id));
       return true;
     }
     await tx.insert(schema.waitlistEntries).values({
       contactId: parsed.data.contactId,
       professionalId: parsed.data.professionalId ?? null,
+      unitId: parsed.data.unitId ?? null,
       period: parsed.data.period,
       notes: parsed.data.notes ?? null,
     });
@@ -284,6 +286,7 @@ export async function updateAppointmentDetailsAction(_prev: ActionState, form: F
     service: field(form, "service"),
     notes: field(form, "notes"),
     durationMinutes: field(form, "durationMinutes"),
+    roomId: form.has("roomId") ? field(form, "roomId") : undefined,
   });
   if (!parsed.success) return { ok: false, errors: flattenErrors(parsed.error), values: formValues(form) };
   try {

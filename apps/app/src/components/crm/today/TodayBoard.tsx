@@ -156,7 +156,7 @@ export function TodayBoard({ data }: { data: TodayData }) {
               {data.brief.text}{" "}
               <span
                 className="inline-flex items-center gap-1 align-middle text-xs font-semibold text-ink-soft"
-                title={data.brief.source === "ia" ? "Redigido pela IA a partir dos números do sistema" : "Montado pelas regras do CRM"}
+                title={data.brief.source === "ia" ? "Redigido pela IA a partir dos números do sistema" : "Montado pelas regras do Tropi"}
               >
                 {data.brief.source === "ia" ? <Sparkles className="size-3" aria-hidden /> : null}
                 {data.brief.pending ? "a IA está revisando" : data.brief.source === "ia" ? "resumo da IA" : ""}
@@ -284,6 +284,8 @@ export function TodayBoard({ data }: { data: TodayData }) {
         appt={selected}
         onClose={() => setSelectedId(null)}
         canEdit={data.canEdit}
+        pep={data.pep}
+        rooms={data.rooms}
         features={{ confirmations: data.features.confirmations && data.perms.confirm, waitlist: data.features.waitlist && data.perms.waitlist, cancel: data.perms.cancel }}
         professionals={data.professionals.map((p) => ({ id: p.id, name: p.name }))}
         today={data.today}

@@ -1,8 +1,7 @@
 "use server";
 
 import { temporaryPassword } from "@ecosaude/auth/crypto";
-import { hasRealCredentials } from "@ecosaude/channels";
-import { CHANNEL_MODES, CHANNELS, CRM_FEATURES, isBrTimeZone, timeZoneLabel } from "@ecosaude/core/crm";
+import { CRM_FEATURES, isBrTimeZone, timeZoneLabel } from "@ecosaude/core/crm";
 import { clinicStaffSchema, quickReplySchema, returnProtocolSchema } from "@ecosaude/core/crm/validation";
 import { flattenErrors } from "@ecosaude/core/validation";
 import { and, db, eq, forgetClinicTimeZone, ne, schema, sql } from "@ecosaude/db";
@@ -161,7 +160,7 @@ export async function createClinicUserAction(_prev: ActionState, form: FormData)
     });
   } catch (error) {
     // O e-mail é único em todas as clínicas (o login descobre a clínica pelo e-mail)
-    if (isUniqueViolation(error)) return { ok: false, errors: { email: "Este e-mail já tem acesso ao EcoSaúde. Use outro." }, values: formValues(form) };
+    if (isUniqueViolation(error)) return { ok: false, errors: { email: "Este e-mail já tem acesso ao Tropi. Use outro." }, values: formValues(form) };
     return { ...toActionError(error), values: formValues(form) };
   }
   revalidatePath("/configuracoes/equipe");
@@ -220,63 +219,7 @@ export async function toggleClinicUserAction(_prev: ActionState, form: FormData)
   return { ok: true, message: active ? "Acesso reativado." : "Acesso desativado." };
 }
 
-/* ----------------------------------- Canais ---------------------------------- */
-
-const channelSchema = z.object({
-  channel: z.enum(CHANNELS),
-  mode: z.enum(CHANNEL_MODES),
-  active: z.boolean(),
-  displayName: z
-    .string()
-    .trim()
-    .max(80)
-    .optional()
-    .transform((v) => v || null),
-  externalAccountId: z
-    .string()
-    .trim()
-    .max(120)
-    .optional()
-    .transform((v) => v || null),
-});
-
-/**
- * Configura um canal. O modo REAL só é aceito quando o servidor tem a
- * credencial do canal e a clínica informou o identificador da conta
- * (número, página, bot). Sem isso, continua em simulação.
- */
-export async function saveChannelAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  const ctx = await authorizeCrm("config.canais");
-  if (!ctx) return NOT_ALLOWED;
-  const parsed = channelSchema.safeParse({
-    channel: field(form, "channel"),
-    mode: field(form, "mode"),
-    active: form.get("active") === "on",
-    displayName: field(form, "displayName"),
-    externalAccountId: field(form, "externalAccountId"),
-  });
-  if (!parsed.success) return { ok: false, errors: flattenErrors(parsed.error), values: formValues(form) };
-  const d = parsed.data;
-  if (d.mode === "real") {
-    if (!hasRealCredentials(d.channel)) return { ok: false, message: "O servidor ainda não tem a credencial deste canal. Veja o passo a passo abaixo." };
-    if (!d.externalAccountId) return { ok: false, errors: { externalAccountId: "Informe o identificador da conta para o modo real." } };
-  }
-  try {
-    await runCrm(ctx, async (tx, scope) => {
-      await tx
-        .insert(schema.channelConnections)
-        .values(d)
-        .onConflictDoUpdate({ target: [schema.channelConnections.clinicId, schema.channelConnections.channel], set: { ...d, updatedAt: new Date() } });
-      await logEvent(tx, { actorId: scope.actorId, type: "channel_updated", data: { canal: d.channel, modo: d.mode, ativo: d.active } });
-    });
-  } catch (error) {
-    if (isUniqueViolation(error)) return { ok: false, errors: { externalAccountId: "Esta conta já está ligada a outra clínica." } };
-    return toActionError(error);
-  }
-  revalidatePath("/configuracoes/canais");
-  revalidatePath("/", "layout");
-  return { ok: true, message: "Canal salvo." };
-}
+/* Canais: ver actions/channels.ts (conexão conferida com o provedor) */
 
 /** Editar nome e perfil de alguém da equipe (a clínica nunca fica sem administração). */
 export async function updateClinicUserAction(_prev: ActionState, form: FormData): Promise<ActionState> {

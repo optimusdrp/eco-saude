@@ -148,7 +148,7 @@ export function ContextPanel({
             </dl>
 
             <dl className="space-y-1 text-sm">
-              <Line label="Cliente desde">{c.since}</Line>
+              <Line label="Contato desde">{c.since}</Line>
               <Line label="Última consulta">{c.lastVisit ?? "nenhuma"}</Line>
               <Line label="Origem">{c.source ?? "não informada"}</Line>
               <Line label="Convênio">{c.insurance ?? "não informado"}</Line>
@@ -205,7 +205,7 @@ export function WindowCard({ thread, nowMs }: { thread: ThreadData; nowMs: numbe
   const h = Math.floor(left / 3_600_000);
   const m = Math.floor((left % 3_600_000) / 60_000);
   return (
-    <section className={cn("rounded-xl p-3 text-sm", open ? "bg-pep-tint text-pep-ink" : "bg-erp-tint text-erp-ink")}>
+    <section className={cn("rounded-xl p-3 text-sm", open ? "bg-ok-tint text-ok-ink" : "bg-erp-tint text-erp-ink")}>
       <h2 className="flex items-center gap-1 font-bold">
         {open ? <Clock className="size-4" aria-hidden /> : <Lock className="size-4" aria-hidden />}
         Janela do {CHANNEL_LABEL[thread.channel]}
@@ -219,7 +219,7 @@ export function WindowCard({ thread, nowMs }: { thread: ThreadData; nowMs: numbe
       </p>
       {!w.unlimited && open ? (
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper/70" role="img" aria-label={`${Math.round((left / 86_400_000) * 100)}% da janela restante`}>
-          <span className={cn("block h-full", left < 2 * 3_600_000 ? "bg-erp" : "bg-pep")} style={{ width: `${Math.min(100, (left / 86_400_000) * 100)}%` }} />
+          <span className={cn("block h-full", left < 2 * 3_600_000 ? "bg-erp" : "bg-ok")} style={{ width: `${Math.min(100, (left / 86_400_000) * 100)}%` }} />
         </div>
       ) : null}
       {open && !w.unlimited && left < 2 * 3_600_000 ? <p className="mt-1 text-xs font-semibold">Fecha em breve: responda agora para não depender de modelo aprovado.</p> : null}

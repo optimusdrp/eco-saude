@@ -53,10 +53,10 @@ const stateInfo: Record<ItemState, { text: string; className: string; Icon: type
   local: { text: "Salvo neste aparelho", className: "text-erp", Icon: HardDrive },
   queued: { text: "Na fila de envio", className: "text-erp", Icon: Send },
   syncing: { text: "Sincronizando", className: "text-white/80", Icon: Loader2 },
-  synced: { text: "Sincronizado", className: "text-pep", Icon: CheckCircle2 },
-  sent: { text: "Enviado", className: "text-pep", Icon: CheckCircle2 },
+  synced: { text: "Sincronizado", className: "text-ok", Icon: CheckCircle2 },
+  sent: { text: "Enviado", className: "text-ok", Icon: CheckCircle2 },
   conflict: { text: "Precisa de decisão", className: "text-[#ff8fa0]", Icon: AlertTriangle },
-  resolved: { text: "Conflito resolvido", className: "text-pep", Icon: CheckCircle2 },
+  resolved: { text: "Conflito resolvido", className: "text-ok", Icon: CheckCircle2 },
 };
 
 export function OfflineSimulator() {
@@ -148,7 +148,7 @@ export function OfflineSimulator() {
           <span
             className={cn(
               "grid size-10 place-items-center rounded-full transition-colors",
-              online ? "bg-pep/20 text-pep" : "bg-erp/20 text-erp",
+              online ? "bg-ok/20 text-ok-ink" : "bg-erp/20 text-erp",
             )}
             aria-hidden
           >
@@ -177,7 +177,7 @@ export function OfflineSimulator() {
           disabled={busy}
           className={cn(
             "relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60",
-            online ? "bg-pep" : "bg-white/20",
+            online ? "bg-ok" : "bg-white/20",
           )}
         >
           <motion.span

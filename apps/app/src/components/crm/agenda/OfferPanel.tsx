@@ -103,7 +103,7 @@ export function OfferPanel({
                           <span
                             className={cn(
                               "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular",
-                              c.score >= 50 ? "bg-pep-tint text-pep-ink" : c.score >= 25 ? "bg-erp-tint text-erp-ink" : "bg-fog text-ink-soft",
+                              c.score >= 50 ? "bg-ok-tint text-ok-ink" : c.score >= 25 ? "bg-erp-tint text-erp-ink" : "bg-fog text-ink-soft",
                             )}
                             title="Chance estimada de aceitar"
                           >

@@ -283,7 +283,7 @@ export async function createClinicManagerAction(_prev: ActionState, form: FormDa
       await audit(tx, user, "clinic.manager_created", "clinic", clinicId, { email: parsed.data.email, userId: created!.id });
     });
   } catch (error) {
-    if (isUniqueViolation(error)) return { ok: false, errors: { email: "Este e-mail já tem acesso ao EcoSaúde." }, values: formValues(form) };
+    if (isUniqueViolation(error)) return { ok: false, errors: { email: "Este e-mail já tem acesso ao Tropi." }, values: formValues(form) };
     throw error;
   }
   revalidatePath(`/clinicas/${clinicId}`);
@@ -292,7 +292,7 @@ export async function createClinicManagerAction(_prev: ActionState, form: FormDa
 
 /**
  * Suporte ao acesso da clínica: quando o ÚNICO gestor perde a senha ou o
- * celular da verificação em duas etapas, só a equipe EcoSaúde consegue ajudar.
+ * celular da verificação em duas etapas, só a equipe Tropi consegue ajudar.
  *   kind = "senha" -> gera senha temporária (mostrada uma vez)
  *   kind = "2fa"   -> desliga a verificação em duas etapas
  * Em ambos os casos, as sessões abertas da pessoa são encerradas.

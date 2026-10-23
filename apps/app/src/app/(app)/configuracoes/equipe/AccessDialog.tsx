@@ -8,11 +8,11 @@
  * O servidor grava apenas as diferenças (liberadas e bloqueadas): se o perfil
  * mudar depois, a pessoa acompanha, mantendo só os ajustes individuais.
  */
-import { CLINIC_PERMISSIONS, permissionsByCategory } from "@ecosaude/core/crm";
-import { RotateCcw, Search, ShieldAlert } from "lucide-react";
+import { CLINIC_PERMISSIONS, HEALTH_COUNCILS, HEALTH_PROFESSIONAL_GRANTS, HEALTH_PROFESSIONAL_ONLY, permissionsByCategory } from "@ecosaude/core/crm";
+import { RotateCcw, Search, ShieldAlert, Stethoscope } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { FormMessage, SelectField, SubmitButton } from "@/components/ui";
+import { Field, FormMessage, SelectField, SubmitButton } from "@/components/ui";
 import { cn } from "@/components/ui/styles";
 import { setUserAccessAction } from "@/modules/crm/actions/permissions";
 
@@ -30,8 +30,21 @@ export function AccessForm({
   person,
   roles,
   onSaved,
+  units = [],
 }: {
-  person: { id: string; name: string; roleId: string | null; grants: string[]; revokes: string[]; isMe: boolean };
+  person: {
+    id: string;
+    name: string;
+    roleId: string | null;
+    grants: string[];
+    revokes: string[];
+    isMe: boolean;
+    health: { council: string | null; number: string | null; uf: string | null };
+    linkedProfessional: { name: string; council: string | null } | null;
+    unitIds: string[];
+  };
+  /** Unidades ativas da clínica (a escolha só aparece com mais de uma) */
+  units?: { id: string; name: string }[];
   roles: AccessRole[];
   onSaved: () => void;
 }) {
@@ -45,9 +58,17 @@ export function AccessForm({
   const [q, setQ] = useState("");
   const [onlyAdjusted, setOnlyAdjusted] = useState(false);
 
+  // Perfil de profissional de saúde (registro no conselho): libera o pacote clínico do Prontuário
+  const [council, setCouncil] = useState(person.health.council ?? "");
+  const [councilNumber, setCouncilNumber] = useState(person.health.number ?? "");
+  const [councilUf, setCouncilUf] = useState(person.health.uf ?? "");
+  const healthPro = (!!council && !!councilNumber.trim()) || !!person.linkedProfessional?.council;
+
   const role = roles.find((r) => r.id === roleId);
-  const fromRole = new Set(role?.permissions ?? []);
-  const can = (key: string) => overrides.get(key) ?? fromRole.has(key);
+  // Ponto de partida igual ao do servidor: perfil + o que vem por ser profissional de saúde
+  const fromRole = new Set([...(role?.permissions ?? []), ...(healthPro ? HEALTH_PROFESSIONAL_GRANTS : [])]);
+  const blockedByHealth = (key: string) => !healthPro && (HEALTH_PROFESSIONAL_ONLY as readonly string[]).includes(key);
+  const can = (key: string) => !blockedByHealth(key) && (overrides.get(key) ?? fromRole.has(key));
 
   useEffect(() => {
     if (state.ok) {
@@ -94,6 +115,50 @@ export function AccessForm({
         {role?.description ? <p className="mt-1 text-xs text-ink-soft">{role.description}</p> : null}
       </div>
 
+      <fieldset className="rounded-xl p-3 ring-1 ring-line">
+        <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold">
+          <Stethoscope className="size-4 text-pep" aria-hidden />
+          Profissional de saúde
+        </legend>
+        <p className="text-xs text-ink-soft">
+          Com registro no conselho, a pessoa lê e registra no Prontuário (pacientes que atende), qualquer que seja o cargo. Sem registro, ninguém lê o conteúdo clínico, mesmo com liberação: sigilo profissional e LGPD (dado de saúde).
+        </p>
+        {person.linkedProfessional ? (
+          <p className="mt-2 text-sm">
+            Ligado ao profissional da agenda <strong>{person.linkedProfessional.name}</strong>
+            {person.linkedProfessional.council ? ` (${person.linkedProfessional.council}): já é profissional de saúde.` : ": sem registro no conselho em Ajustes > Clínica."}
+          </p>
+        ) : null}
+        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]">
+          <SelectField label="Conselho" name="healthCouncil" id={`hc-${person.id}`} value={council} onChange={(e) => setCouncil(e.target.value)} error={state.errors?.council}>
+            <option value="">Não é profissional de saúde</option>
+            {Object.entries(HEALTH_COUNCILS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {k} ({v})
+              </option>
+            ))}
+          </SelectField>
+          <Field label="Número" name="healthCouncilNumber" id={`hn-${person.id}`} value={councilNumber} onChange={(e) => setCouncilNumber(e.target.value)} disabled={!council} error={state.errors?.number} />
+          <Field label="UF" name="healthCouncilUf" id={`hu-${person.id}`} value={councilUf} maxLength={2} onChange={(e) => setCouncilUf(e.target.value.toUpperCase())} disabled={!council} error={state.errors?.uf} />
+        </div>
+      </fieldset>
+
+      {units.length > 1 ? (
+        <fieldset className="rounded-xl p-3 ring-1 ring-line">
+          <legend className="px-1 text-sm font-semibold">Unidades em que trabalha</legend>
+          <input type="hidden" name="unitScope" value="1" />
+          <p className="text-xs text-ink-soft">Agenda, Hoje e Consultório mostram só as unidades marcadas. Todas marcadas = vê todas (inclusive as que forem criadas depois).</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {units.map((u) => (
+              <label key={u.id} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-xl px-3 ring-1 ring-line has-[:checked]:bg-crm-tint has-[:checked]:ring-crm/40">
+                <input type="checkbox" name="unitIds" value={u.id} defaultChecked={!person.unitIds.length || person.unitIds.includes(u.id)} className="size-4 accent-[var(--color-crm)]" />
+                <span className="text-sm font-semibold">{u.name}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+
       <p className="rounded-xl bg-fog p-3 text-sm" role="status">
         <strong>{total}</strong> de {CLINIC_PERMISSIONS.length} permissões.{" "}
         {overrides.size ? (
@@ -131,10 +196,11 @@ export function AccessForm({
               {items.map((i) => {
                 const on = can(i.key);
                 const adjusted = overrides.has(i.key);
+                const needsHealth = blockedByHealth(i.key);
                 return (
                   <li key={i.key} className={cn("flex items-center gap-3 px-3 py-2", adjusted && "bg-erp-tint/50")}>
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                      <input type="checkbox" checked={on} onChange={(e) => setPerm(i.key, e.target.checked)} className="peer sr-only" />
+                    <label className={cn("flex min-w-0 flex-1 items-center gap-3", needsHealth ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
+                      <input type="checkbox" checked={on} disabled={needsHealth} onChange={(e) => setPerm(i.key, e.target.checked)} className="peer sr-only" />
                       <span
                         aria-hidden
                         className="relative h-6 w-10 shrink-0 rounded-full bg-ink/20 transition-colors peer-checked:bg-crm peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-crm after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-4"
@@ -144,7 +210,15 @@ export function AccessForm({
                           {i.label}
                           {"sensitive" in i && i.sensitive ? <ShieldAlert className="size-3.5 text-erp-ink" aria-label="acesso amplo" /> : null}
                         </span>
-                        <span className="block text-xs text-ink-soft">{adjusted ? (on ? "Liberada só para esta pessoa" : "Bloqueada só para esta pessoa") : `Como no perfil (${on ? "pode" : "não pode"})`}</span>
+                        <span className="block text-xs text-ink-soft">
+                          {needsHealth
+                            ? "Exige registro no conselho (profissional de saúde)"
+                            : adjusted
+                              ? on
+                                ? "Liberada só para esta pessoa"
+                                : "Bloqueada só para esta pessoa"
+                              : `Como no perfil (${on ? "pode" : "não pode"})`}
+                        </span>
                       </span>
                     </label>
                     {adjusted ? (

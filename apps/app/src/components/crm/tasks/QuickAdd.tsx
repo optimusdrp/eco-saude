@@ -75,7 +75,7 @@ export function QuickAdd({ today, team, userId, inputRef }: { today: string; tea
           <span className="text-ink-soft">Datas: hoje, amanhã, sexta, 20/10, em 3 dias, semana que vem. Responsável: @nome.</span>
         )}
         {state.message && !state.ok ? <span className="font-semibold text-alert">{state.errors?.title ?? state.message}</span> : null}
-        {state.ok && state.message && !text ? <span className="font-semibold text-pep-ink">{state.message}</span> : null}
+        {state.ok && state.message && !text ? <span className="font-semibold text-ok-ink">{state.message}</span> : null}
       </div>
     </form>
   );

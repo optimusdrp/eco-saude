@@ -1,8 +1,9 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { ChannelError, credentialsFor, getAdapter, type MediaRef } from "@ecosaude/channels";
+import { ChannelError, getAdapter, type MediaRef } from "@ecosaude/channels";
 import { attachmentLabel, detectFileType, formatBytes, MAX_ATTACHMENT_BYTES, REJECTED_FILE_MESSAGE, safeFileName, type AttachmentKind } from "@ecosaude/core/crm";
 import { and, asc, eq, inArray, lt, schema, sql, withTenant, type Tx } from "@ecosaude/db";
+import { connectionCredentials } from "../channels";
 import { attachmentKey, getStorage } from "./storage";
 
 /**
@@ -123,7 +124,7 @@ export async function processPendingAttachments(clinicId: string, limit = 20): P
         if (!bytes) throw new ChannelError("Arquivo do simulador não encontrado.", false);
       } else {
         const [conn] = await withTenant(clinicId, (tx) => tx.select().from(schema.channelConnections).where(eq(schema.channelConnections.channel, a.channel)));
-        const adapter = getAdapter(a.channel, conn?.mode ?? "simulacao", credentialsFor(a.channel, conn?.externalAccountId ?? null));
+        const adapter = getAdapter(a.channel, conn?.mode ?? "simulacao", connectionCredentials(conn ?? null, a.channel));
         if (!adapter.downloadMedia) throw new ChannelError("Este canal não baixa arquivos.", false);
         const d = await adapter.downloadMedia(ref, MAX_ATTACHMENT_BYTES);
         bytes = d.bytes;

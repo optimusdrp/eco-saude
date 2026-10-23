@@ -1,4 +1,4 @@
-import { parseWebhook, verifyMetaSignature, verifyMetaSubscription, verifyTelegramSecret } from "@ecosaude/channels";
+import { parseWebhook, telegramWebhookSecret, verifyMetaSignature, verifyMetaSubscription, verifyTelegramSecret } from "@ecosaude/channels";
 import { CHANNELS, type Channel } from "@ecosaude/core/crm";
 import { withTenant } from "@ecosaude/db";
 import { after, NextResponse, type NextRequest } from "next/server";
@@ -42,13 +42,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cha
   const raw = await req.text();
   let telegramAccount: string | null = null;
   if (channel === "telegram") {
-    if (!verifyTelegramSecret(req.headers.get("x-telegram-bot-api-secret-token"), process.env.TELEGRAM_WEBHOOK_SECRET ?? "")) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
     // O Telegram não diz qual bot recebeu: vai na URL cadastrada (?conta=UsuarioDoBot)
     telegramAccount = req.nextUrl.searchParams.get("conta");
-  } else if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"), process.env.META_APP_SECRET ?? "")) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    const server = process.env.TELEGRAM_WEBHOOK_SECRET ?? "";
+    const header = req.headers.get("x-telegram-bot-api-secret-token");
+    // Segredo DO BOT (bots conectados pela tela) ou o segredo único antigo (bot configurado à mão)
+    const ok = !!server && ((!!telegramAccount && verifyTelegramSecret(header, telegramWebhookSecret(server, telegramAccount))) || verifyTelegramSecret(header, server));
+    if (!ok) return new NextResponse("Unauthorized", { status: 401 });
+  } else {
+    // Instagram com login do Instagram assina com o segredo do app do Instagram
+    const signature = req.headers.get("x-hub-signature-256");
+    const secrets = [process.env.META_APP_SECRET, channel === "instagram" ? process.env.INSTAGRAM_APP_SECRET : undefined].filter((s): s is string => !!s);
+    if (!secrets.some((s) => verifyMetaSignature(raw, signature, s))) return new NextResponse("Unauthorized", { status: 401 });
   }
 
   let body: unknown;

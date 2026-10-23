@@ -231,3 +231,198 @@ describe("anexos nos canais", () => {
     await assert.rejects(createWhatsAppAdapter({ accessToken: "t" }, fakeFetch(5000)).downloadMedia!({ provider: "whatsapp", mediaId: "MEDIA9" }, 1000), /limite/);
   });
 });
+
+/* ----------------------------- Evolution API ------------------------------- */
+import { connectEvolutionInstance, createEvolutionAdapter, evolutionSender, evolutionWebhookSecret, parseEvolutionWebhook, sampleEvolutionMessage, verifyEvolutionWebhook, connectTelegramBot, telegramWebhookSecret, connectInstagram, getAdapter } from "./index";
+
+/** Servidor falso: guarda as chamadas e devolve a resposta configurada por caminho */
+function fakeFetch(routes: Record<string, unknown>, calls: { url: string; init: { method: string; headers: Record<string, string>; body?: unknown } }[] = []): FetchLike {
+  return async (url, init) => {
+    calls.push({ url, init: init as never });
+    const key = Object.keys(routes).find((k) => url.includes(k));
+    const data = key ? routes[key] : { error: "not found" };
+    const status = key ? 200 : 404;
+    return { ok: status === 200, status, json: async () => data, text: async () => JSON.stringify(data) };
+  };
+}
+
+describe("Evolution API (WhatsApp por QR code / código / Cloud API)", () => {
+  it("lê texto, nome e conta (instância) e ignora as mensagens enviadas pelo próprio celular", () => {
+    const r = parseEvolutionWebhook(sampleEvolutionMessage({ instance: "tropi-abc", from: "5551999990000", name: "Ana", text: "Oi, tem horário?", id: "3EB0A1" }));
+    assert.equal(r.messages.length, 1);
+    const m = r.messages[0]!;
+    assert.equal(m.accountId, "tropi-abc");
+    assert.equal(m.from.externalId, "5551999990000");
+    assert.equal(m.from.phone, "5551999990000");
+    assert.equal(m.from.name, "Ana");
+    assert.equal(m.text, "Oi, tem horário?");
+    // Enviada pelo celular da clínica: não é mensagem do paciente; vai para sentFromPhone
+    const mine = parseEvolutionWebhook({ ...sampleEvolutionMessage({ instance: "tropi-abc", from: "5551999990000", name: "Clínica Exemplo", text: "Pode vir às 14h", id: "X", fromMe: true }) });
+    assert.equal(mine.messages.length, 0);
+    assert.equal(mine.sentFromPhone.length, 1);
+    const sent = mine.sentFromPhone[0]!;
+    assert.equal(sent.from.externalId, "5551999990000"); // a outra ponta: o paciente
+    assert.equal(sent.from.name, undefined); // pushName é o nome da clínica, não vira nome do paciente
+    assert.equal(sent.text, "Pode vir às 14h");
+    assert.equal(sent.externalMessageId, "X");
+  });
+
+  it("foto enviada pelo celular da clínica traz a referência do arquivo (o Tropi baixa depois)", () => {
+    const r = parseEvolutionWebhook(sampleEvolutionMessage({ instance: "i1", from: "5551999990000", id: "IMG1", fromMe: true, media: { kind: "image", mime: "image/jpeg" }, text: "Seu pedido de exame" }));
+    assert.equal(r.sentFromPhone[0]!.attachments?.[0]?.kind, "image");
+    assert.equal(r.sentFromPhone[0]!.text, "Seu pedido de exame");
+    // Mensagem do celular para grupo continua ignorada
+    assert.equal(parseEvolutionWebhook(sampleEvolutionMessage({ instance: "i1", from: "1203630@g.us", id: "G1", fromMe: true, text: "oi" })).sentFromPhone.length, 0);
+  });
+
+  it("ignora grupos, status e canais; aceita LID e prefere o número quando vem junto", () => {
+    assert.equal(evolutionSender({ remoteJid: "1203630@g.us" }), null);
+    assert.equal(evolutionSender({ remoteJid: "status@broadcast" }), null);
+    assert.equal(evolutionSender({ remoteJid: "1234@newsletter" }), null);
+    assert.deepEqual(evolutionSender({ remoteJid: "987654321@lid" }), { externalId: "987654321@lid" });
+    assert.deepEqual(evolutionSender({ remoteJid: "987654321@lid", remoteJidAlt: "5551988887777@s.whatsapp.net" }), { externalId: "5551988887777", phone: "5551988887777" });
+  });
+
+  it("anexo vira referência para baixar depois (o webhook não traz o arquivo)", () => {
+    const r = parseEvolutionWebhook(sampleEvolutionMessage({ instance: "i1", from: "5551999990000", id: "M1", media: { kind: "document", mime: "application/pdf", fileName: "exame.pdf" } }));
+    const a = r.messages[0]!.attachments![0]!;
+    assert.deepEqual(a.ref, { provider: "evolution", instance: "i1", messageId: "M1" });
+    assert.equal(a.mime, "application/pdf");
+    assert.equal(r.messages[0]!.text, "[documento: exame.pdf]");
+  });
+
+  it("desembrulha mensagem efêmera e lê texto estendido; ignora reação", () => {
+    const base = { event: "messages.upsert", instance: "i1", data: { key: { remoteJid: "5551@s.whatsapp.net", fromMe: false, id: "E1" }, message: { ephemeralMessage: { message: { extendedTextMessage: { text: "sumindo" } } } }, messageTimestamp: 1 } };
+    // número curto demais não é paciente: usa um número válido
+    base.data.key.remoteJid = "5551999990000@s.whatsapp.net";
+    assert.equal(parseEvolutionWebhook(base).messages[0]!.text, "sumindo");
+    const reaction = { ...base, data: { ...base.data, message: { reactionMessage: { text: "👍" } } } };
+    assert.equal(parseEvolutionWebhook(reaction).messages.length, 0);
+  });
+
+  it("status de entrega (Baileys e Cloud) e estado da conexão", () => {
+    const st = parseEvolutionWebhook({ event: "messages.update", instance: "i1", data: { keyId: "OUT1", fromMe: true, status: "DELIVERY_ACK" } });
+    assert.equal(st.statuses[0]!.status, "entregue");
+    assert.equal(parseEvolutionWebhook({ event: "MESSAGES_UPDATE", instance: "i1", data: { keyId: "OUT1", fromMe: true, status: "READ" } }).statuses[0]!.status, "lida");
+    const c = parseEvolutionWebhook({ event: "connection.update", instance: "i1", data: { instance: "i1", state: "open", wuid: "555133330000:12@s.whatsapp.net", profileName: "Clínica" } });
+    assert.deepEqual(c.connection, { state: "open", number: "555133330000", profileName: "Clínica" });
+  });
+
+  it("segredo do webhook por instância: confere e recusa o de outra instância", () => {
+    const s = evolutionWebhookSecret("segredo-servidor", "inst-a");
+    assert.equal(verifyEvolutionWebhook(s, "segredo-servidor", "inst-a"), true);
+    assert.equal(verifyEvolutionWebhook(s, "segredo-servidor", "inst-b"), false);
+    assert.equal(verifyEvolutionWebhook(null, "segredo-servidor", "inst-a"), false);
+  });
+
+  it("envia texto e mídia no formato da v2 e baixa arquivo em base64", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const fetchFn = fakeFetch({ "/message/sendText/": { key: { id: "OUT-T" } }, "/message/sendMedia/": { key: { id: "OUT-M" } }, "/chat/getBase64FromMediaMessage/": { base64: Buffer.from("%PDF-1.4").toString("base64"), mimetype: "application/pdf", fileName: "a.pdf" } }, calls);
+    const ad = getAdapter("whatsapp", "real", { kind: "evolution_qr", evolutionUrl: "https://evo.test/", evolutionApiKey: "k", instance: "inst a" }, fetchFn);
+    assert.equal((await ad.send({ to: "5551999990000", text: "Olá" })).externalMessageId, "OUT-T");
+    assert.equal(calls[0]!.url, "https://evo.test/message/sendText/inst%20a");
+    assert.equal(calls[0]!.init.headers.apikey, "k");
+    assert.deepEqual(JSON.parse(String(calls[0]!.init.body)), { number: "5551999990000", text: "Olá" });
+    await ad.send({ to: "5551999990000", text: "Segue", media: { kind: "image", mime: "image/png", fileName: "x.png", bytes: new Uint8Array([1, 2, 3]) } });
+    const body = JSON.parse(String(calls[1]!.init.body));
+    assert.equal(body.mediatype, "image");
+    assert.equal(body.caption, "Segue");
+    assert.equal(body.media, Buffer.from([1, 2, 3]).toString("base64"));
+    const file = await ad.downloadMedia!({ provider: "evolution", instance: "inst a", messageId: "M1" }, 1000);
+    assert.equal(Buffer.from(file.bytes).toString(), "%PDF-1.4");
+    await assert.rejects(ad.downloadMedia!({ provider: "evolution", instance: "inst a", messageId: "M1" }, 3), /maior que o limite/);
+  });
+
+  it("QR code e código de pareamento", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const qr = await connectEvolutionInstance({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: fakeFetch({ "/instance/connect/": { pairingCode: "ABCD1234", code: "2@x", base64: "data:image/png;base64,AAA", count: 1 } }, calls) }, "i1", "5551999990000");
+    assert.equal(qr.qr?.pairingCode, "ABCD1234");
+    assert.match(calls[0]!.url, /\/instance\/connect\/i1\?number=5551999990000$/);
+    const open = await connectEvolutionInstance({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: fakeFetch({ "/instance/connect/": { instance: { instanceName: "i1", state: "open" } } }) }, "i1");
+    assert.equal(open.state, "open");
+  });
+
+  it("chave recusada não é reenviada (erro definitivo)", async () => {
+    const fetchFn: FetchLike = async () => ({ ok: false, status: 401, json: async () => ({}), text: async () => "" });
+    const ad = createEvolutionAdapter({ baseUrl: "https://evo.test", apiKey: "errada", fetchFn }, "i1");
+    await assert.rejects(ad.send({ to: "5551999990000", text: "x" }), (e: Error & { retryable?: boolean }) => e.retryable === false && /recusou a chave/.test(e.message));
+  });
+});
+
+describe("Telegram e Instagram por clínica", () => {
+  it("Telegram: confere o token e registra o webhook com o segredo DO bot", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const fetchFn = fakeFetch({ "/getMe": { ok: true, result: { username: "ClinicaBot", first_name: "Clínica" } }, "/setWebhook": { ok: true, result: true } }, calls);
+    const r = await connectTelegramBot({ botToken: "123:abc", telegramBase: "https://tg.test" }, "https://tropi.app", "srv", fetchFn);
+    assert.equal(r.username, "ClinicaBot");
+    const hook = JSON.parse(String(calls[1]!.init.body));
+    assert.equal(hook.url, "https://tropi.app/api/webhooks/telegram?conta=ClinicaBot");
+    assert.equal(hook.secret_token, telegramWebhookSecret("srv", "ClinicaBot"));
+    assert.deepEqual(hook.allowed_updates, ["message", "edited_message"]);
+  });
+
+  it("Instagram com login do Instagram usa graph.instagram.com e envia anexo por link", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const fetchFn = fakeFetch({ "/me?fields=user_id": { user_id: "1784", username: "clinica" }, "subscribed_apps": { success: true }, "/messages": { message_id: "mid.1" } }, calls);
+    const r = await connectInstagram({ kind: "instagram_login", accessToken: "IGT", instagramBase: "https://ig.test" }, fetchFn);
+    assert.equal(r.accountId, "1784");
+    const ad = getAdapter("instagram", "real", { kind: "instagram_login", accessToken: "IGT", accountId: "1784", instagramBase: "https://ig.test" }, fetchFn);
+    await ad.send({ to: "IGSID", text: "", media: { kind: "image", mime: "image/png", fileName: "a.png", bytes: new Uint8Array([1]), publicUrl: "https://tropi.app/api/midia/tok" } });
+    const last = calls.at(-1)!;
+    assert.match(last.url, /^https:\/\/ig\.test\/v23\.0\/1784\/messages$/);
+    assert.equal(JSON.parse(String(last.init.body)).message.attachment.payload.url, "https://tropi.app/api/midia/tok");
+  });
+});
+
+describe("Evolution: destinatário", () => {
+  it("completa o DDI 55 em número brasileiro sem DDI e mantém LID", async () => {
+    const { evolutionRecipient } = await import("./index");
+    assert.equal(evolutionRecipient("(51) 99999-0000"), "5551999990000");
+    assert.equal(evolutionRecipient("5551999990000"), "5551999990000");
+    assert.equal(evolutionRecipient("123@lid"), "123@lid");
+  });
+});
+
+/** Resposta de erro no formato da Evolution v2.3.7 (src/main.ts): { status, error, response: { message } } */
+function evoError(status: number, message: unknown[]): FetchLike {
+  return async () => ({ ok: false, status, json: async () => ({ status, error: "Bad Request", response: { message } }), text: async () => "" });
+}
+
+describe("Evolution: divergências encontradas no código-fonte v2.3.7", () => {
+  it("número sem WhatsApp vira aviso claro e definitivo (antes: 'Evolution: [object Object]')", async () => {
+    const ad = createEvolutionAdapter({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: evoError(400, [{ jid: "5551999990000@s.whatsapp.net", exists: false, number: "5551999990000" }]) }, "i1");
+    await assert.rejects(ad.send({ to: "5551999990000", text: "Olá" }), (e: Error & { retryable?: boolean }) => e.retryable === false && /não tem WhatsApp/.test(e.message));
+  });
+
+  it("falha ao baixar arquivo: tenta de novo (rede do WhatsApp), menos quando a mensagem não existe", async () => {
+    const flaky = createEvolutionAdapter({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: evoError(400, ["Error: read ECONNRESET"]) }, "i1");
+    await assert.rejects(flaky.downloadMedia!({ provider: "evolution", instance: "i1", messageId: "M1" }, 1000), (e: Error & { retryable?: boolean }) => e.retryable === true);
+    const gone = createEvolutionAdapter({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: evoError(400, ["Message not found"]) }, "i1");
+    await assert.rejects(gone.downloadMedia!({ provider: "evolution", instance: "i1", messageId: "M1" }, 1000), (e: Error & { retryable?: boolean }) => e.retryable === false);
+  });
+
+  it("API oficial via Evolution: baixa o arquivo pelo ID da Meta e manda nota de voz por sendMedia", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const fetchFn = fakeFetch({ "/chat/getBase64FromMediaMessage/": { base64: Buffer.from("OggS").toString("base64"), mimetype: "audio/ogg" }, "/message/sendMedia/": { key: { id: "wamid.X" } } }, calls);
+    const ad = getAdapter("whatsapp", "real", { kind: "evolution_cloud", evolutionUrl: "https://evo.test", evolutionApiKey: "k", instance: "c1" }, fetchFn);
+    await ad.downloadMedia!({ provider: "evolution", instance: "c1", messageId: "wamid.A", cloud: { type: "audioMessage", mediaId: "998877", mime: "audio/ogg" } }, 1000);
+    assert.deepEqual(JSON.parse(String(calls[0]!.init.body)), { message: { key: { id: "wamid.A" }, messageType: "audioMessage", message: { audioMessage: { id: "998877", mime_type: "audio/ogg" } } } });
+    await ad.send({ to: "5551999990000", text: "", media: { kind: "audio", mime: "audio/ogg", fileName: "voz.ogg", bytes: new Uint8Array([1]) } });
+    assert.match(calls[1]!.url, /\/message\/sendMedia\/c1$/);
+    assert.equal(JSON.parse(String(calls[1]!.init.body)).mediatype, "audio");
+  });
+
+  it("documento sem nome ganha um nome (a Evolution quebra sem fileName em base64)", async () => {
+    const calls: Parameters<typeof fakeFetch>[1] = [];
+    const ad = createEvolutionAdapter({ baseUrl: "https://evo.test", apiKey: "k", fetchFn: fakeFetch({ "/message/sendMedia/": { key: { id: "D1" } } }, calls) }, "i1");
+    await ad.send({ to: "5551999990000", text: "", media: { kind: "document", mime: "application/pdf", fileName: "", bytes: new Uint8Array([1]) } });
+    assert.equal(JSON.parse(String(calls[0]!.init.body)).fileName, "documento.pdf");
+  });
+
+  it("status sem fromMe confiável (API oficial) continua sendo lido; cópia de outro aparelho é desembrulhada", () => {
+    const st = parseEvolutionWebhook({ event: "messages.update", instance: "c1", data: { keyId: "wamid.Z", fromMe: false, status: "READ" } });
+    assert.equal(st.statuses[0]?.status, "lida");
+    const dev = parseEvolutionWebhook({ event: "messages.upsert", instance: "i1", data: { key: { remoteJid: "5551999990000@s.whatsapp.net", fromMe: true, id: "D2" }, message: { deviceSentMessage: { destinationJid: "5551999990000@s.whatsapp.net", message: { conversation: "Confirmado" } } }, messageTimestamp: 1 } });
+    assert.equal(dev.sentFromPhone[0]?.text, "Confirmado");
+  });
+});

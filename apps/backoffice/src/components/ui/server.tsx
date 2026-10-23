@@ -23,7 +23,7 @@ const toneClass: Record<Tone, string> = {
   pep: "bg-pep-tint text-pep-ink",
   bi: "bg-bi-tint text-bi",
   alert: "bg-alert-tint text-alert",
-  success: "bg-pep-tint text-pep-ink",
+  success: "bg-ok-tint text-ok-ink",
   warning: "bg-erp-tint text-erp-ink",
 };
 

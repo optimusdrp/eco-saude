@@ -1,7 +1,7 @@
 /**
  * PERMISSÕES DA CLÍNICA
  *
- * Cada ação do CRM exige UMA permissão. As permissões de uma pessoa vêm de:
+ * Cada ação do Tropi exige UMA permissão. As permissões de uma pessoa vêm de:
  *
  *   permissões do perfil (cargo)  +  liberadas só para ela  −  bloqueadas só para ela
  *
@@ -13,7 +13,7 @@
  */
 import type { ClinicRole } from "./constants";
 
-export const PERMISSION_CATEGORIES = ["conversas", "agenda", "contatos", "tarefas", "retornos", "configuracoes"] as const;
+export const PERMISSION_CATEGORIES = ["conversas", "agenda", "contatos", "tarefas", "retornos", "prontuario", "configuracoes"] as const;
 export type PermissionCategory = (typeof PERMISSION_CATEGORIES)[number];
 
 export const PERMISSION_CATEGORY_LABEL: Record<PermissionCategory, string> = {
@@ -22,6 +22,7 @@ export const PERMISSION_CATEGORY_LABEL: Record<PermissionCategory, string> = {
   contatos: "Contatos e jornada",
   tarefas: "Tarefas e qualidade",
   retornos: "Retornos",
+  prontuario: "Prontuário",
   configuracoes: "Ajustes",
 };
 
@@ -72,6 +73,49 @@ export const PERMISSION_CATALOG = [
   // Retornos
   { key: "retornos.gerir", category: "retornos", label: "Radar de retornos", hint: "Ver quem deve voltar e enviar lembretes." },
   { key: "retornos.protocolos", category: "retornos", label: "Protocolos de retorno", hint: "Criar e editar as regras de retorno." },
+  // Prontuário (módulo Tropi Prontuário). Dado de saúde (LGPD art. 11) e sigilo profissional:
+  // cada nível mostra só o necessário para a função (princípio da necessidade, LGPD art. 6º, III).
+  { key: "prontuario.consultorio", category: "prontuario", label: "Consultório (pacientes do dia)", hint: "Lista do dia com a situação de cada paciente: aguardando, chegou, triagem, em atendimento, finalizado. Sem conteúdo clínico." },
+  {
+    key: "prontuario.resumo",
+    category: "prontuario",
+    label: "Resumo de segurança",
+    hint: "Alergias, medicamentos em uso e problemas ativos. Útil para enfermagem e para a recepção numa urgência.",
+    sensitive: true,
+  },
+  { key: "prontuario.triagem", category: "prontuario", label: "Triagem e sinais vitais", hint: "Registrar e ver a pré-consulta (queixa, sinais vitais, prioridade) antes do atendimento.", sensitive: true },
+  {
+    key: "prontuario.documentos",
+    category: "prontuario",
+    label: "Documentos emitidos",
+    hint: "Ver e reimprimir receitas, atestados e declarações para entregar ao paciente, sem ver a consulta.",
+    sensitive: true,
+  },
+  {
+    key: "prontuario.ver",
+    category: "prontuario",
+    label: "Atendimento completo (ler prontuários)",
+    hint: "Anamnese, exame, diagnósticos, evolução e histórico. Só vale para quem tem perfil de profissional de saúde. Cada abertura fica registrada.",
+    sensitive: true,
+    healthProfessional: true,
+  },
+  {
+    key: "prontuario.atender",
+    category: "prontuario",
+    label: "Atender e emitir documentos",
+    hint: "Registrar atendimentos, adendos, receitas, atestados e pedidos de exame. Só vale para profissional de saúde.",
+    healthProfessional: true,
+  },
+  { key: "prontuario.modelos", category: "prontuario", label: "Modelos e ajustes do prontuário", hint: "Modelos de anamnese e evolução, regra de sigilo, cabeçalho dos documentos e registro de acessos." },
+  {
+    key: "prontuario.acesso_emergencia",
+    category: "prontuario",
+    label: "Acesso de emergência",
+    hint: "Abrir prontuário de paciente que não atendeu (quando a clínica restringe), com justificativa registrada e aviso à gestão. Só vale para profissional de saúde.",
+    sensitive: true,
+    healthProfessional: true,
+  },
+  { key: "prontuario.exportar", category: "prontuario", label: "Entregar cópia do prontuário", hint: "Gerar a cópia completa do prontuário a pedido do paciente (sem ler na tela).", sensitive: true },
   // Ajustes
   { key: "config.clinica", category: "configuracoes", label: "Clínica e profissionais", hint: "Dados da clínica, profissionais, horários e ausências." },
   { key: "config.automacoes", category: "configuracoes", label: "Automações", hint: "Ligar, desligar e criar regras automáticas." },
@@ -83,7 +127,7 @@ export const PERMISSION_CATALOG = [
   { key: "config.permissoes", category: "configuracoes", label: "Perfis e permissões", hint: "Mudar o que cada perfil e cada pessoa pode fazer.", sensitive: true },
   { key: "config.seguranca", category: "configuracoes", label: "Segurança e atividade", hint: "Pendências de segurança e o histórico de ações.", sensitive: true },
   { key: "config.plano", category: "configuracoes", label: "Plano e módulos", hint: "Módulos contratados e funcionalidades." },
-] as const satisfies readonly { key: string; category: PermissionCategory; label: string; hint: string; sensitive?: boolean }[];
+] as const satisfies readonly { key: string; category: PermissionCategory; label: string; hint: string; sensitive?: boolean; healthProfessional?: boolean }[];
 
 export type ClinicPermission = (typeof PERMISSION_CATALOG)[number]["key"];
 export const CLINIC_PERMISSIONS: readonly ClinicPermission[] = PERMISSION_CATALOG.map((p) => p.key);
@@ -103,8 +147,32 @@ export function permissionsByCategory() {
 const ALL = CLINIC_PERMISSIONS;
 
 /** Permissões iniciais dos 3 perfis do sistema (a clínica pode mudar depois). */
+/**
+ * PROFISSIONAL DE SAÚDE
+ * Quem tem registro em conselho (CRM, CRO, COREN, CRP, CRN...), seja no próprio cadastro de
+ * acesso ("perfil de profissional de saúde") ou por estar ligado a um profissional da agenda.
+ *
+ *  - HEALTH_PROFESSIONAL_ONLY: só valem para profissional de saúde. Para os demais, são
+ *    ignoradas mesmo que o perfil ou a liberação individual tenham (sigilo profissional).
+ *  - HEALTH_PROFESSIONAL_GRANTS: o profissional de saúde recebe automaticamente, qualquer que
+ *    seja o cargo (ex.: a gestora que também é médica). A gestão pode bloquear individualmente.
+ */
+export const HEALTH_PROFESSIONAL_ONLY: readonly ClinicPermission[] = ["prontuario.ver", "prontuario.atender", "prontuario.acesso_emergencia"];
+export const HEALTH_PROFESSIONAL_GRANTS: readonly ClinicPermission[] = [
+  "prontuario.consultorio",
+  "prontuario.resumo",
+  "prontuario.triagem",
+  "prontuario.documentos",
+  "prontuario.ver",
+  "prontuario.atender",
+  "prontuario.acesso_emergencia",
+];
+
+/** Dado de saúde: fora dos padrões da gestão e dos cargos administrativos (a clínica libera se precisar) */
+const CLINICAL: readonly ClinicPermission[] = [...HEALTH_PROFESSIONAL_ONLY, "prontuario.resumo", "prontuario.triagem", "prontuario.documentos"];
+
 export const DEFAULT_ROLE_PERMISSIONS: Record<ClinicRole, readonly ClinicPermission[]> = {
-  gestor: ALL,
+  gestor: ALL.filter((p) => !CLINICAL.includes(p)),
   recepcao: [
     "conversas.ver",
     "conversas.responder",
@@ -129,7 +197,23 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<ClinicRole, readonly ClinicPermiss
     "retornos.protocolos",
     "config.respostas",
   ],
-  profissional: ["conversas.ver", "agenda.ver", "agenda.editar", "pacientes.ver", "jornada.ver", "tarefas.ver"],
+  // Acesso de emergência ligado: com o sigilo "só quem atendeu", o profissional ainda abre
+  // qualquer prontuário numa urgência (com justificativa registrada e aviso à gestão)
+  profissional: [
+    "conversas.ver",
+    "agenda.ver",
+    "agenda.editar",
+    "pacientes.ver",
+    "jornada.ver",
+    "tarefas.ver",
+    "prontuario.consultorio",
+    "prontuario.resumo",
+    "prontuario.triagem",
+    "prontuario.documentos",
+    "prontuario.ver",
+    "prontuario.atender",
+    "prontuario.acesso_emergencia",
+  ],
 };
 
 export const ROLE_DESCRIPTION: Record<ClinicRole, string> = {
@@ -151,7 +235,7 @@ export const ROLE_PRESETS: { id: string; name: string; description: string; base
     name: "Coordenação clínica",
     description: "Cuida da operação e dos profissionais, sem mexer em acessos, canais ou plano.",
     base: "gestor",
-    permissions: ALL.filter((p) => !["config.equipe", "config.permissoes", "config.canais", "config.plano"].includes(p)),
+    permissions: ALL.filter((p) => !["config.equipe", "config.permissoes", "config.canais", "config.plano", ...CLINICAL].includes(p)),
   },
   {
     id: "atendimento",
@@ -211,9 +295,9 @@ export const ROLE_PRESETS: { id: string; name: string; description: string; base
   {
     id: "enfermagem",
     name: "Enfermagem / técnico",
-    description: "Acompanha a agenda do dia e as fichas; marca comparecimento.",
+    description: "Consultório, triagem e sinais vitais, resumo de segurança e documentos. Com o COREN no cadastro, também lê e registra no prontuário.",
     base: "profissional",
-    permissions: ["conversas.ver", "agenda.ver", "agenda.editar", "pacientes.ver", "tarefas.ver"],
+    permissions: ["conversas.ver", "agenda.ver", "agenda.editar", "pacientes.ver", "tarefas.ver", "prontuario.consultorio", "prontuario.resumo", "prontuario.triagem", "prontuario.documentos"],
   },
   {
     id: "assistente",
@@ -227,7 +311,7 @@ export const ROLE_PRESETS: { id: string; name: string; description: string; base
     name: "Auditoria / somente leitura",
     description: "Vê tudo, não altera nada. Útil para consultoria e auditoria LGPD.",
     base: "recepcao",
-    permissions: [...ALL.filter((p) => p.endsWith(".ver")), "config.seguranca"],
+    permissions: [...ALL.filter((p) => p.endsWith(".ver") && !CLINICAL.includes(p)), "config.seguranca"],
   },
 ];
 
@@ -242,12 +326,36 @@ export function effectivePermissions(input: {
   baseRole: ClinicRole;
   grants?: readonly string[] | null;
   revokes?: readonly string[] | null;
+  /** Tem registro em conselho (perfil de profissional de saúde) */
+  healthProfessional?: boolean;
 }): ClinicPermission[] {
-  const set = new Set<string>(input.rolePermissions ?? DEFAULT_ROLE_PERMISSIONS[input.baseRole]);
+  const set = new Set<string>(baselinePermissions(input));
   for (const g of input.grants ?? []) set.add(g);
   for (const r of input.revokes ?? []) set.delete(r);
+  if (!input.healthProfessional) for (const p of HEALTH_PROFESSIONAL_ONLY) set.delete(p);
   return CLINIC_PERMISSIONS.filter((p) => set.has(p));
 }
+
+/** O que a pessoa tem antes dos ajustes individuais: perfil (cargo) + o que vem por ser profissional de saúde */
+export function baselinePermissions(input: { rolePermissions: readonly string[] | null | undefined; baseRole: ClinicRole; healthProfessional?: boolean }): string[] {
+  const set = new Set<string>(input.rolePermissions ?? DEFAULT_ROLE_PERMISSIONS[input.baseRole]);
+  if (input.healthProfessional) for (const p of HEALTH_PROFESSIONAL_GRANTS) set.add(p);
+  return [...set];
+}
+
+/** Conselhos profissionais da saúde (sigla -> profissão), para o perfil de profissional de saúde */
+export const HEALTH_COUNCILS: Record<string, string> = {
+  CRM: "Medicina",
+  CRO: "Odontologia",
+  COREN: "Enfermagem",
+  CRP: "Psicologia",
+  CRN: "Nutrição",
+  CREFITO: "Fisioterapia e terapia ocupacional",
+  CRF: "Farmácia",
+  CRFA: "Fonoaudiologia",
+  CRBM: "Biomedicina",
+  CREF: "Educação física",
+};
 
 /** Normaliza uma lista vinda de formulário/banco: só chaves válidas, sem repetição, na ordem do catálogo. */
 export function normalizePermissions(values: readonly string[]): ClinicPermission[] {

@@ -34,12 +34,12 @@ export function Tomorrow({ data, onOpen }: { data: TodayData; onOpen: (id: strin
       </p>
       {/* Barra: confirmadas / aguardando resposta / sem pedido */}
       <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-fog" role="img" aria-label={`${confirmed.length} confirmadas, ${waiting.length} aguardando resposta, ${notAsked.length} sem pedido de confirmação`}>
-        <span className="bg-pep" style={{ width: pct(confirmed.length) }} />
+        <span className="bg-ok" style={{ width: pct(confirmed.length) }} />
         <span className="bg-erp" style={{ width: pct(waiting.length) }} />
         <span className="bg-ink/15" style={{ width: pct(notAsked.length) }} />
       </div>
       <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-soft">
-        <Legend className="bg-pep">Confirmadas {confirmed.length}</Legend>
+        <Legend className="bg-ok">Confirmadas {confirmed.length}</Legend>
         <Legend className="bg-erp">Aguardando {waiting.length}</Legend>
         <Legend className="bg-ink/15">Sem pedido {notAsked.length}</Legend>
       </ul>

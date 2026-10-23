@@ -13,6 +13,8 @@ import {
   URGENCY_GUIDANCE,
   type Channel,
   type Intent,
+  isFromPhone,
+  isHumanOutbound,
 } from "@ecosaude/core/crm";
 import { asc, eq, inSequence, schema, withTenant } from "@ecosaude/db";
 import { notFound } from "next/navigation";
@@ -177,7 +179,9 @@ export async function Inbox({
         dayLabel: formatDayShort(m.createdAt),
         time: formatTime(m.createdAt),
         authorName: m.author?.name.split(" ")[0] ?? null,
-        auto: m.direction === "out" && !m.authorId,
+        // Sem autor = automática, a não ser que tenha vindo do celular da clínica (resposta humana)
+        auto: m.direction === "out" && !isHumanOutbound(m),
+        fromPhone: m.direction === "out" && isFromPhone(m.meta),
         handledBy: ((m.meta as { handledBy?: string } | null)?.handledBy ?? null)?.replace(/_/g, " ") ?? null,
         error: m.error,
         attachments: data.files.get(m.id) ?? [],

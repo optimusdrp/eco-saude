@@ -159,7 +159,7 @@ export function FormMessage({ state }: { state: { ok?: boolean; message?: string
       role={state.ok ? "status" : "alert"}
       className={cn(
         "rounded-xl px-3 py-2 text-sm font-semibold",
-        state.ok ? "bg-pep-tint text-pep-ink" : "bg-alert-tint text-alert",
+        state.ok ? "bg-ok-tint text-ok-ink" : "bg-alert-tint text-alert",
       )}
     >
       {state.message}

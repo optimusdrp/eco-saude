@@ -160,7 +160,7 @@ function AnonymizeDialog(p: PrivacyPanelProps & { open: boolean; onClose: () => 
         <p className="flex gap-2 rounded-xl bg-erp-tint px-3 py-2 text-erp-ink">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>
-            O prontuário (quando existir no EcoSaúde) não é apagado: a lei obriga a guardá-lo por 20 anos. As mensagens no celular do paciente e no WhatsApp também não são apagadas pelo sistema.
+            O prontuário (quando existir no Tropi) não é apagado: a lei obriga a guardá-lo por 20 anos. As mensagens no celular do paciente e no WhatsApp também não são apagadas pelo sistema.
           </span>
         </p>
 

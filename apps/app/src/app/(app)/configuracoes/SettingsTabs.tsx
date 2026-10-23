@@ -9,6 +9,7 @@
 import {
   BadgeCheck,
   Building2,
+  DoorOpen,
   KeyRound,
   LayoutGrid,
   MessageSquareText,
@@ -46,6 +47,7 @@ export const SETTINGS_ICONS: Record<SettingsIcon, typeof UserRound> = {
   plano: BadgeCheck,
   ia: Sparkles,
   duracoes: Timer,
+  unidades: DoorOpen,
 };
 
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();

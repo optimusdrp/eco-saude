@@ -15,7 +15,7 @@ export function TrainNow() {
         <BrainCircuit className={cn("size-4", pending && "animate-pulse")} aria-hidden /> {pending ? "Treinando..." : "Treinar agora"}
       </button>
       {result ? (
-        <p role="status" className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-sm", result.ok ? "bg-pep-tint text-pep-ink" : "bg-erp-tint text-erp-ink")}>
+        <p role="status" className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-sm", result.ok ? "bg-ok-tint text-ok-ink" : "bg-erp-tint text-erp-ink")}>
           {result.message}
         </p>
       ) : null}

@@ -8,7 +8,7 @@
  *  - checkDraft: confere o que a IA devolveu antes de mostrar ao atendente. Recusa conteúdo
  *    clínico, dado mascarado vazando e texto vazio; avisa horário que não está na agenda.
  *  - ruleDraft: o PLANO B. Sem IA (desligada, fora do ar, lenta, sem cota), a sugestão sai
- *    das regras que o CRM já usa (intenção + horários livres + respostas rápidas).
+ *    das regras que o Tropi já usa (intenção + horários livres + respostas rápidas).
  *
  * Nada aqui envia mensagem: o resultado é sempre um RASCUNHO que o atendente revisa.
  */
@@ -125,7 +125,7 @@ export function buildDraftPrompt(ctx: DraftContext): { system: string; user: str
   const user = [
     "CONTEXTO",
     `Paciente: ${ctx.patientFirstName}`,
-    `Etapa no CRM: ${ctx.stage}${ctx.tags.length ? `; etiquetas: ${ctx.tags.join(", ")}` : ""}`,
+    `Etapa no Tropi: ${ctx.stage}${ctx.tags.length ? `; etiquetas: ${ctx.tags.join(", ")}` : ""}`,
     `Próxima consulta: ${ctx.nextAppointment ?? "nenhuma marcada"}`,
     `Última visita: ${ctx.lastVisit ?? "nunca veio"}`,
     `HORARIOS_LIVRES${ctx.slotsProfessional ? ` (com ${ctx.slotsProfessional})` : ""}: ${ctx.freeSlots.length ? ctx.freeSlots.join("; ") : "(nenhum)"}`,
@@ -174,7 +174,7 @@ export function leaksMasked(text: string): boolean {
 export type DraftCheck = { ok: true; result: DraftResult } | { ok: false; reason: string };
 
 /**
- * Confere o JSON devolvido pela IA. Recusa (e o CRM cai no plano B) quando:
+ * Confere o JSON devolvido pela IA. Recusa (e o Tropi cai no plano B) quando:
  * não é JSON válido, veio vazio, tem orientação clínica ou repete dado ocultado.
  * Avisa (sem recusar) quando cita horário que não está na agenda.
  */

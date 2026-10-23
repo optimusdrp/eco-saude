@@ -1,3 +1,4 @@
+import { BRAND } from "@ecosaude/core";
 import type { NavItem } from "@/types";
 
 /**
@@ -6,12 +7,13 @@ import type { NavItem } from "@/types";
  * altere SOMENTE este arquivo: todos os componentes leem daqui.
  */
 export const siteConfig = {
-  name: "EcoSaúde",
-  tagline: "Um só ambiente para a clínica inteira",
+  // Nome e slogan vêm da marca central (@ecosaude/core): mude lá, e site, CRM e backoffice acompanham
+  name: BRAND.name,
+  tagline: BRAND.tagline,
   description:
-    "Ecossistema para clínicas com CRM, ERP, Prontuário Eletrônico e BI. Você contrata só os módulos que precisa e usa tudo em um único ambiente, que continua funcionando quando a internet cai.",
+    "Tropi é o ecossistema da clínica: Atendimento, Gestão, Prontuário e Indicadores. Você contrata só os módulos que precisa e usa tudo em um único ambiente, que continua funcionando quando a internet cai.",
   /** Usado em metadados (Open Graph, sitemap). Ajuste após definir o domínio. */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://ecosaude.vercel.app",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://tropi.vercel.app",
   locale: "pt_BR",
 } as const;
 

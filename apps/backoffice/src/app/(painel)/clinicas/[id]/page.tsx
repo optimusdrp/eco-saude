@@ -99,7 +99,7 @@ export default async function ClinicPage({
       />
 
       {justCreated ? (
-        <p role="status" className="mb-5 rounded-xl bg-pep-tint px-4 py-3 font-semibold text-pep-ink">
+        <p role="status" className="mb-5 rounded-xl bg-ok-tint px-4 py-3 font-semibold text-ok-ink">
           Clínica cadastrada. Agora adicione as contratações abaixo.
         </p>
       ) : null}

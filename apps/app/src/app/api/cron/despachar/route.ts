@@ -15,6 +15,7 @@ import { expireOffers, runAutoConfirmations } from "@/modules/crm/scheduling";
 import { runScheduledAutomations } from "@/modules/crm/scheduled-automations";
 import { crmClinicIds, systemScope } from "@/modules/crm/system";
 import { cleanupAuthRecords } from "@/lib/auth/recovery-core";
+import { purgeOldNotices } from "@/modules/notices";
 
 /**
  * ROTINA AGENDADA (Vercel Cron, ver vercel.json)
@@ -99,5 +100,7 @@ export async function GET(req: NextRequest) {
   }
   // Limpeza da autenticação (limites de tentativa vencidos, links de recuperação antigos)
   const auth = await cleanupAuthRecords().catch((e) => (console.error("[limpeza de acesso]", e), null));
-  return NextResponse.json({ ok: true, clinics: report, auth });
+  // Avisos do sino com mais de 90 dias (o registro permanente é a auditoria do prontuário)
+  const notices = await purgeOldNotices().catch((e) => (console.error("[limpeza de avisos]", e), null));
+  return NextResponse.json({ ok: true, clinics: report, auth, notices });
 }

@@ -5,7 +5,7 @@ import {
   buildAuditPrompt,
   checkAudit,
   firstName,
-  isOpen,
+  openStatus,
   isoWeek,
   pickSample,
   ruleAudit,
@@ -18,6 +18,7 @@ import { and, eq, gt, inArray, schema, sql, withTenant } from "@ecosaude/db";
 import { automationSettings } from "../automation-settings";
 import { logEvent } from "../journey";
 import { aiConfigured, AiError, generate } from "./provider";
+import { loadOpening } from "../opening";
 
 /**
  * AUDITORIA DE ATENDIMENTO POR AMOSTRAGEM (servidor)
@@ -112,9 +113,10 @@ export async function runServiceAudit(clinicId: string, opts: { force?: boolean;
           inArray(schema.messages.direction, ["in", "out"]),
         ),
       );
-    // Horário de atendimento: o mesmo de "Fora do horário" (vale mesmo com a resposta automática desligada)
-    const fh = auto.fora_horario;
-    const hours = { dias: (fh?.dias as number[]) ?? [1, 2, 3, 4, 5], inicio: String(fh?.inicio ?? "08:00"), fim: String(fh?.fim ?? "18:00") };
+    // Horário de atendimento: o da unidade principal (Ajustes > Unidades), com os feriados e
+    // fechamentos da clínica inteira. Fora dele, a demora para responder não pesa na auditoria.
+    const opening = await loadOpening(tx, "2000-01-01");
+    const hours = { week: opening.hoursOf(opening.mainUnitId), closures: opening.closures, mainUnitId: opening.mainUnitId };
     return {
       week,
       hours,
@@ -135,7 +137,7 @@ export async function runServiceAudit(clinicId: string, opts: { force?: boolean;
   const hours = plan.hours!;
   const openAt = (d: Date) => {
     const z = utcToZoned(d);
-    return isOpen(hours, z.weekday, z.minutes);
+    return openStatus({ hours: hours.week, closures: hours.closures, unitId: hours.mainUnitId, date: z.date, weekday: z.weekday, minutes: z.minutes }).open;
   };
   type Row = {
     conversationId: string;

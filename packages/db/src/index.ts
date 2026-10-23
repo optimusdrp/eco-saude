@@ -15,11 +15,12 @@ import { ensureEnv } from "./env";
 import * as baseSchema from "./schema";
 import migrationJournal from "../migrations/meta/_journal.json";
 import * as crmSchema from "./schema-crm";
+import * as pepSchema from "./schema-pep";
 
 export { ensureEnv };
 
-/** Todas as tabelas e relações (plataforma + CRM) num objeto só. */
-export const schema = { ...baseSchema, ...crmSchema };
+/** Todas as tabelas e relações (plataforma + CRM + Prontuário) num objeto só. */
+export const schema = { ...baseSchema, ...crmSchema, ...pepSchema };
 // Reexporta os operadores mais usados para os apps não dependerem do drizzle diretamente
 export { and, asc, avg, count, desc, eq, gt, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql, sum } from "drizzle-orm";
 export type { SQL } from "drizzle-orm";

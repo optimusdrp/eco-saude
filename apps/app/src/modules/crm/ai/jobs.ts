@@ -36,7 +36,7 @@ import { aiConfigured, AiError, generate } from "./provider";
  *   1. queueAiJob (dentro da transação que gerou o evento): só registra o pedido.
  *   2. processAiJobs (after() logo depois, e rotina de 10 min): lê os dados, chama a
  *      IA FORA da transação, confere e grava. Falha passageira tenta até 3 vezes.
- *   3. PLANO B em todos: as regras do CRM dão o resultado (ou, no retorno, vai o texto
+ *   3. PLANO B em todos: as regras do Tropi dão o resultado (ou, no retorno, vai o texto
  *      da clínica que já está na fila).
  * Sugestões de cadastro e etiquetas NÃO alteram a ficha: a equipe aplica.
  */

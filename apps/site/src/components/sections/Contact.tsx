@@ -98,14 +98,14 @@ export function Contact() {
     <section id="demonstracao" aria-labelledby="demo-title" className="py-20 lg:py-28">
       <Container className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <SectionHeading id="demo-title" title="Veja com os dados da sua rotina">
-          Conte um pouco sobre a clínica e mostramos, em 30 minutos, como o CRM funciona
+          Conte um pouco sobre a clínica e mostramos, em 30 minutos, como o Tropi Atendimento funciona
           na sua realidade. Sem compromisso.
         </SectionHeading>
 
         <div className="rounded-3xl bg-paper p-5 ring-1 ring-line sm:p-8">
           {status === "sent" ? (
             <div className="py-10 text-center" role="status">
-              <CheckCircle2 className="mx-auto size-12 text-pep" aria-hidden />
+              <CheckCircle2 className="mx-auto size-12 text-ok" aria-hidden />
               <h3 className="mt-4 text-2xl font-bold">Pedido enviado</h3>
               <p className="mx-auto mt-2 max-w-sm text-ink-soft">
                 Vamos responder por e-mail com opções de horário.
@@ -178,7 +178,7 @@ export function Contact() {
               </div>
 
               <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
-                <Button type="submit" size="lg" disabled={status === "sending"} className="sm:min-w-56">
+                <Button type="submit" variant="sun" size="lg" disabled={status === "sending"} className="sm:min-w-56">
                   {status === "sending" ? "Enviando..." : "Pedir demonstração"}
                 </Button>
                 {status === "error" ? (
