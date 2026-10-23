@@ -1,10 +1,11 @@
 "use client";
 
-import { Ban, FileDown, MessageSquarePlus, Play, ShieldAlert, Trash2, UserPlus } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import { Ban, FileDown, MessageSquarePlus, Play, Replace, ShieldAlert, Trash2, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { CheckboxField, Dialog, Field, FormMessage, SelectField, SubmitButton, TextareaField } from "@/components/ui";
 import { buttonStyles, cn, type Variant } from "@/components/ui/styles";
-import { addAddendumAction, createPatientAction, toggleTemplateAction, discardDraftAction, emergencyAccessAction, exportRecordAction, revokeDocumentAction, startEncounterAction } from "@/modules/pep/actions";
+import { addAddendumAction, changeTemplateAction, createPatientAction, toggleTemplateAction, discardDraftAction, emergencyAccessAction, exportRecordAction, revokeDocumentAction, startEncounterAction } from "@/modules/pep/actions";
 
 /**
  * Peças interativas pequenas do Prontuário (as telas são do servidor; estas
@@ -35,7 +36,7 @@ export function StartEncounterButton({
       {appointmentId ? <input type="hidden" name="appointmentId" value={appointmentId} /> : null}
       {templates?.length ? (
         <SelectField label="Modelo" name="templateId" id={`tpl-${contactId}`} defaultValue="">
-          <option value="">Automático (primeira consulta ou retorno)</option>
+          <option value="">Automático (sua especialidade: primeira consulta ou retorno)</option>
           {[...new Set(templates.map((t) => t.specialty))].map((sp) => (
             <optgroup key={sp} label={sp}>
               {templates.filter((t) => t.specialty === sp).map((t) => (
@@ -237,6 +238,70 @@ export function DiscardDraftButton({ encounterId }: { encounterId: string }) {
             </SubmitButton>
           </div>
         </form>
+      </Dialog>
+    </>
+  );
+}
+
+/**
+ * "Trocar formulário" do atendimento em rascunho. As respostas de campos iguais nos dois
+ * formulários continuam; as demais saem (o aviso diz isso antes de confirmar).
+ */
+export function ChangeTemplateButton({ encounterId, current, templates }: { encounterId: string; current: string | null; templates: { id: string; name: string; specialty: string }[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [choice, setChoice] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const specialties = [...new Set(templates.map((t) => t.specialty))];
+  function apply() {
+    if (!choice) return;
+    start(async () => {
+      const r = await changeTemplateAction(encounterId, choice);
+      if (!r.ok) return setMessage(r.message ?? "Não foi possível trocar.");
+      setOpen(false);
+      router.refresh();
+    });
+  }
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={buttonStyles("ghost", "min-h-10 px-3 text-sm")}>
+        <Replace className="size-4" aria-hidden />
+        Trocar formulário
+      </button>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Trocar o formulário deste atendimento" description="Respostas de campos que existem nos dois formulários continuam. As demais são descartadas.">
+        <div className="space-y-3">
+          <SelectField label="Formulário" name="templateId" id={`chg-${encounterId}`} value={choice} onChange={(e) => setChoice(e.target.value)}>
+            <option value="" disabled>
+              Escolha
+            </option>
+            {specialties.map((sp) => (
+              <optgroup key={sp} label={sp}>
+                {templates
+                  .filter((t) => t.specialty === sp)
+                  .map((t) => (
+                    <option key={t.id} value={t.id} disabled={t.id === current}>
+                      {t.name}
+                      {t.id === current ? " (atual)" : ""}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </SelectField>
+          {message ? (
+            <p role="alert" className="text-sm font-semibold text-alert">
+              {message}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setOpen(false)} className={buttonStyles("ghost")}>
+              Voltar
+            </button>
+            <button type="button" onClick={apply} disabled={!choice || pending} className={buttonStyles("primary", "bg-pep hover:bg-pep-ink")}>
+              {pending ? "Trocando..." : "Trocar formulário"}
+            </button>
+          </div>
+        </div>
       </Dialog>
     </>
   );

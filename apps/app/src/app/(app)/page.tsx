@@ -11,6 +11,6 @@ export default async function Home() {
   const ent = await getEntitlements(user.clinicId);
   const pep = ent.modules.includes("pep");
   if (pep && user.healthProfessional && user.permissions.includes("prontuario.consultorio")) redirect("/consultorio");
-  if (!ent.modules.includes("crm") && pep) redirect(user.permissions.includes("prontuario.consultorio") ? "/consultorio" : "/prontuario");
+  if (!ent.modules.includes("crm") && pep) redirect(user.permissions.includes("prontuario.consultorio") ? "/consultorio" : "/pacientes");
   redirect("/hoje");
 }

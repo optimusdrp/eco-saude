@@ -291,6 +291,13 @@ export const professionals = pgTable(
     clinicId: clinicId(),
     name: text("name").notNull(),
     specialty: text("specialty"),
+    /**
+     * Formulários do prontuário escolhidos pela gestão para este profissional (vazio = o Tropi
+     * escolhe pela especialidade). Chave estrangeira para pep_templates criada na migração 0037
+     * (fora do Drizzle para não criar dependência circular entre os esquemas).
+     */
+    firstTemplateId: uuid("first_template_id"),
+    returnTemplateId: uuid("return_template_id"),
     /** Cor da coluna na agenda (token da paleta: crm, erp, pep, bi) */
     color: text("color").notNull().default("crm"),
     userId: uuid("user_id").references(() => clinicUsers.id, { onDelete: "set null" }),

@@ -20,13 +20,15 @@ test("atendimento completo: resumo, registro, documentos, finalização, adendo 
 
   await test.step("Consultório lista a consulta de hoje e abre o atendimento", async () => {
     await pg.goto("/consultorio");
-    await expect(pg.locator("nav[aria-label='Navegação principal'] a[href='/prontuario']")).toHaveCount(1);
+    await expect(pg.locator("nav[aria-label='Navegação principal'] a[href='/pacientes']")).toHaveCount(1);
     const row = pg.locator("li", { has: pg.getByText("Ana Lúcia Reis") }).first();
     await row.getByRole("button", { name: "Atender" }).click();
     await pg.waitForURL(/\/prontuario\/atendimentos\//);
     encounterId = pg.url().split("/").pop()!;
     expect(await value("select status from appointments where id = $1", [appointmentId])).toBe("compareceu");
     expect(await value("select template_name from pep_encounters where id = $1", [encounterId])).toBe("Primeira consulta");
+    // Beatriz é dermatologista: o formulário é o da DERMATOLOGIA (não o de clínica geral)
+    expect(await value("select t.specialty_key from pep_encounters e join pep_templates t on t.id = e.template_id where e.id = $1", [encounterId])).toBe("dermatologia");
   });
 
   await test.step("Resumo clínico: alergia e medicamento em uso", async () => {
@@ -46,6 +48,7 @@ test("atendimento completo: resumo, registro, documentos, finalização, adendo 
   await test.step("Registro com sinais vitais, CID-10 e salvamento automático", async () => {
     await pg.locator("#f-queixa").fill("Dor de cabeça há 3 dias");
     await pg.locator("#f-hda").fill("Cefaleia occipital, pior pela manhã. Sem febre.");
+    await pg.locator("#f-exame_dermatologico").fill("Pele sem lesões suspeitas.");
     await pg.getByRole("button", { name: "Bom", exact: true }).click();
     const vit = pg.locator("section[aria-labelledby=sec-vitais]");
     const inputs = vit.locator("input");
@@ -157,9 +160,10 @@ test("atendimento completo: resumo, registro, documentos, finalização, adendo 
 
   await test.step("Gestão: modelos, sigilo e cópia do prontuário sem ler o conteúdo", async () => {
     const g = await as("gestor");
-    await g.goto("/prontuario");
-    await expect(g).toHaveURL(/\/prontuario\/modelos/);
-    await g.getByRole("button", { name: "Editar Primeira consulta" }).click();
+    // Formulários ficam em Ajustes > Prontuário (a gestão configura); o endereço antigo redireciona
+    await g.goto("/prontuario/modelos");
+    await expect(g).toHaveURL(/\/configuracoes\/prontuario\/modelos/);
+    await g.locator("section", { has: g.getByRole("heading", { name: "Dermatologia", exact: true }) }).getByRole("button", { name: "Editar Primeira consulta" }).click();
     const dlg = g.locator("dialog[open]");
     await dlg.getByRole("button", { name: /^Campo$/ }).click();
     const n = await dlg.locator("ol > li").count();
@@ -167,10 +171,10 @@ test("atendimento completo: resumo, registro, documentos, finalização, adendo 
     await dlg.locator(`#tp-${n - 1}`).selectOption("escala");
     await dlg.getByRole("button", { name: "Salvar modelo" }).click();
     await expect(g.locator("dialog[open]")).toHaveCount(0);
-    expect(await value("select fields::text from pep_templates where system_key = 'clinica_geral_primeira'")).toContain("dor_escala");
+    expect(await value("select fields::text from pep_templates where system_key = 'dermatologia_primeira'")).toContain("dor_escala");
     expect(await value("select template_fields::text from pep_encounters where id = $1", [encounterId])).not.toContain("dor_escala");
 
-    await g.goto("/prontuario/ajustes");
+    await g.goto("/configuracoes/prontuario");
     await g.locator("input[name=accessMode][value=proprios]").check();
     await g.locator("#ps-header").fill("Rua das Flores, 100, Centro. CNES 1234567");
     await g.getByRole("button", { name: "Salvar ajustes" }).click();
@@ -202,6 +206,10 @@ test("atendimento completo: resumo, registro, documentos, finalização, adendo 
     const r = await as("recepcao");
     await r.goto("/hoje");
     await expect(r.locator("nav[aria-label='Navegação principal'] a[href='/prontuario']")).toHaveCount(0);
+    // Em Pacientes a recepção vê a lista, mas sem o atalho do prontuário
+    await r.goto("/pacientes");
+    await expect(r.getByRole("heading", { name: "Pacientes", level: 1 })).toBeVisible();
+    await expect(r.locator("a[href^='/prontuario/pacientes/']")).toHaveCount(0);
     const res = await r.request.get(`/api/prontuario/documentos/${recipeId}/pdf`);
     expect([401, 403]).toContain(res.status());
   });

@@ -1,6 +1,6 @@
 import "server-only";
 import { addDaysIso, clinicTimeZone, formatAddress, todayIso } from "@ecosaude/core/crm";
-import { ageYears, BUILT_IN_TEMPLATES, DOCUMENT_KIND_LABEL, type Answers, type Diagnosis, type DocumentContent, type Vitals } from "@ecosaude/core/pep";
+import { ageYears, AREA_RULES, areaOf, BUILT_IN_TEMPLATES, DOCUMENT_KIND_LABEL, matchSpecialty, pickTemplate, templatesToInstall, type Answers, type ClinicArea, type Diagnosis, type DocumentContent, type TemplateKind, type Vitals } from "@ecosaude/core/pep";
 import { contentHash, verificationCode } from "@ecosaude/core/pep/server";
 import { and, asc, desc, eq, inArray, isNull, schema, sql, type Tx } from "@ecosaude/db";
 import type { DocumentHeader } from "@ecosaude/db/schema-pep";
@@ -18,12 +18,29 @@ import { audit, loadPepSettings, professionalOfUser } from "./access";
 
 /* --------------------------------- Modelos --------------------------------- */
 
-/** Garante que a clínica tem os modelos prontos do Tropi (uma vez; a clínica pode editar a cópia) */
+/**
+ * Garante que a clínica tem os formulários prontos que USA: os da especialidade de cada
+ * profissional ativo e o geral de cada área marcada em Ajustes > Prontuário. Instala uma vez
+ * (a clínica pode editar a cópia; um modelo desativado não volta sozinho).
+ */
 export async function ensureBuiltInTemplates(tx: Tx): Promise<void> {
+  const settings = await loadPepSettings(tx);
+  const pros = await tx.select({ specialty: schema.professionals.specialty, council: schema.professionals.council }).from(schema.professionals).where(eq(schema.professionals.active, true));
+  await installTemplates(tx, templatesToInstall({ areas: settings.areas, professionals: pros }).map((t) => t.key));
+}
+
+/** Instala formulários prontos pela chave (os que a clínica já tem ficam como estão) */
+export async function installTemplates(tx: Tx, keys: string[]): Promise<number> {
+  if (!keys.length) return 0;
   const existing = await tx.select({ key: schema.pepTemplates.systemKey }).from(schema.pepTemplates).where(sql`${schema.pepTemplates.systemKey} is not null`);
   const have = new Set(existing.map((e) => e.key));
-  const missing = BUILT_IN_TEMPLATES.filter((t) => !have.has(t.key));
-  if (missing.length) await tx.insert(schema.pepTemplates).values(missing.map((t) => ({ specialty: t.specialty, name: t.name, fields: t.fields, systemKey: t.key }))).onConflictDoNothing();
+  const missing = BUILT_IN_TEMPLATES.filter((t) => keys.includes(t.key) && !have.has(t.key));
+  if (missing.length)
+    await tx
+      .insert(schema.pepTemplates)
+      .values(missing.map((t) => ({ specialty: t.specialty, specialtyKey: t.specialtyKey, kind: t.kind, name: t.name, fields: t.fields, systemKey: t.key })))
+      .onConflictDoNothing();
+  return missing.length;
 }
 
 export async function activeTemplates(tx: Tx) {
@@ -122,12 +139,19 @@ export async function startEncounter(tx: Tx, ctx: PepContext, input: { contactId
   const [triage] = appointment ? await tx.select({ vitals: schema.pepTriages.vitals }).from(schema.pepTriages).where(eq(schema.pepTriages.appointmentId, appointment.id)) : [];
 
   const templates = await activeTemplates(tx);
-  // Modelo: o escolhido; senão "retorno" se o paciente já tem atendimento, senão "primeira consulta"
-  let template = templates.find((t) => t.id === input.templateId);
-  if (!template) {
-    const [prev] = await tx.select({ id: schema.pepEncounters.id }).from(schema.pepEncounters).where(eq(schema.pepEncounters.contactId, input.contactId)).limit(1);
-    template = templates.find((t) => t.systemKey === (prev ? "clinica_geral_retorno" : "clinica_geral_primeira")) ?? templates[0];
-  }
+  const settings = await loadPepSettings(tx);
+  // Formulário (regra em packages/core/src/pep/specialties.ts): o escolhido; o definido pela gestão
+  // para o profissional; senão o da especialidade dele, de PRIMEIRA CONSULTA ou de RETORNO.
+  // É retorno quando o paciente já foi atendido na MESMA especialidade (ou, sem especialidade
+  // reconhecida, por este profissional).
+  const isReturn = await isReturnVisit(tx, input.contactId, pro);
+  const template = pickTemplate({
+    templates: templates.map((t) => ({ ...t, kind: t.kind as TemplateKind | null })),
+    chosenId: input.templateId,
+    professional: pro,
+    clinicAreas: settings.areas,
+    isReturn,
+  });
   const [row] = await tx
     .insert(schema.pepEncounters)
     .values({
@@ -151,6 +175,24 @@ export async function startEncounter(tx: Tx, ctx: PepContext, input: { contactId
       .where(eq(schema.appointments.id, appointment.id));
   }
   return row!.id;
+}
+
+/** O paciente já foi atendido nesta especialidade? (decide entre primeira consulta e retorno) */
+async function isReturnVisit(tx: Tx, contactId: string, pro: { id: string; specialty: string | null }): Promise<boolean> {
+  const prev = await tx
+    .select({ professionalId: schema.pepEncounters.professionalId, specialty: schema.professionals.specialty })
+    .from(schema.pepEncounters)
+    .innerJoin(schema.professionals, eq(schema.professionals.id, schema.pepEncounters.professionalId))
+    .where(and(eq(schema.pepEncounters.contactId, contactId), eq(schema.pepEncounters.status, "finalizado")));
+  const mine = matchSpecialty(pro.specialty);
+  if (!mine) return prev.some((p) => p.professionalId === pro.id);
+  return prev.some((p) => p.professionalId === pro.id || matchSpecialty(p.specialty)?.key === mine.key);
+}
+
+/** Regras da área do profissional: sinais vitais e documentos que a profissão emite */
+export function rulesFor(pro: { specialty: string | null; council: string | null }, clinicAreas: readonly ClinicArea[]) {
+  const area = areaOf({ specialty: pro.specialty, council: pro.council, clinicAreas });
+  return { area, ...AREA_RULES[area] };
 }
 
 export async function loadEncounter(tx: Tx, id: string) {
@@ -187,6 +229,22 @@ export async function saveDraft(tx: Tx, id: string, version: number, data: Draft
   if (!cur) throw new UserError("Atendimento não encontrado.");
   if (cur.status === "finalizado") throw new UserError("Este atendimento já foi finalizado. Para complementar, use um adendo.");
   throw new UserError("Este atendimento foi alterado em outra aba ou aparelho. Recarregue a página para ver a versão mais recente.");
+}
+
+/**
+ * Troca o formulário de um atendimento em RASCUNHO (ex.: abriu "primeira consulta" e era retorno).
+ * Respostas de campos que existem nos dois formulários (mesmo identificador) são mantidas.
+ */
+export async function changeTemplate(tx: Tx, e: EncounterRecord, templateId: string): Promise<void> {
+  if (e.status !== "rascunho") throw new UserError("Este atendimento já foi finalizado.");
+  const [t] = await tx.select().from(schema.pepTemplates).where(and(eq(schema.pepTemplates.id, templateId), eq(schema.pepTemplates.active, true)));
+  if (!t) throw new UserError("Formulário não encontrado ou desativado.");
+  const keep = new Set(t.fields.map((f) => f.id));
+  const answers = Object.fromEntries(Object.entries(e.answers ?? {}).filter(([k]) => keep.has(k)));
+  await tx
+    .update(schema.pepEncounters)
+    .set({ templateId: t.id, templateName: t.name, templateFields: t.fields, answers, version: sql`${schema.pepEncounters.version} + 1` })
+    .where(and(eq(schema.pepEncounters.id, e.id), eq(schema.pepEncounters.status, "rascunho")));
 }
 
 /** Conteúdo que o hash protege (o que forma o registro clínico) */
@@ -287,6 +345,9 @@ export async function issueDocument(tx: Tx, ctx: PepContext, e: EncounterRecord,
   const [clinic] = await tx.select().from(schema.clinics).where(eq(schema.clinics.id, ctx.user.clinicId));
   const settings = await loadPepSettings(tx);
   const pro = e.professional;
+  // A profissão pode emitir este documento? (psicologia não emite receita, por exemplo)
+  const rules = rulesFor(pro, settings.areas);
+  if (!rules.documents.includes(content.kind)) throw new UserError(`${DOCUMENT_KIND_LABEL[content.kind]} não é emitido pela área de ${pro.name}.`);
   if (!pro.council || !pro.councilNumber)
     throw new UserError(`Cadastre o registro no conselho de ${pro.name} (Ajustes > Clínica > Profissionais) antes de emitir documentos: ele é obrigatório na receita e no atestado.`);
   // Endereço, telefone e CNES da UNIDADE onde o atendimento aconteceu (cada endereço tem o seu CNES)

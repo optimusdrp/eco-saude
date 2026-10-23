@@ -39,6 +39,7 @@ export function ContactForm({
   idPrefix = "ct",
   onUseExisting,
   initialName,
+  asPatient = false,
 }: {
   initial?: ContactFormValues;
   onDone?: (contactId?: string, name?: string) => void;
@@ -47,6 +48,8 @@ export function ContactForm({
   onUseExisting?: (c: { id: string; name: string }) => void;
   /** Nome já digitado em outra busca (ex.: "Cadastrar Fulano" no agendamento) */
   initialName?: string;
+  /** Cadastro feito na página Pacientes: já entra como paciente (não como lead) */
+  asPatient?: boolean;
 }) {
   const editing = !!initial.id;
   const [state, action] = useActionState(editing ? updateContactAction : createContactAction, {});
@@ -76,6 +79,7 @@ export function ContactForm({
       }}
     >
       <FormMessage state={state} />
+      {!editing && asPatient ? <input type="hidden" name="asPatient" value="1" /> : null}
       {editing ? (
         <>
           <input type="hidden" name="id" value={initial.id} />
@@ -133,7 +137,7 @@ export function ContactForm({
 }
 
 /** Botão "Novo paciente": abre o cadastro e, ao salvar, leva para a ficha. */
-export function NewContactButton({ label = "Novo contato" }: { label?: string }) {
+export function NewContactButton({ label = "Novo contato", asPatient = false }: { label?: string; asPatient?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [goTo, setGoTo] = useState<string | null>(null);
@@ -145,9 +149,15 @@ export function NewContactButton({ label = "Novo contato" }: { label?: string })
       <button type="button" onClick={() => setOpen(true)} className={buttonStyles("primary")}>
         <UserPlus className="size-4" aria-hidden /> {label}
       </button>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Novo contato" description="Interessado ou paciente. Só o nome é obrigatório. O resto pode ser completado depois.">
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={asPatient ? "Cadastrar paciente" : "Novo contato"}
+        description={asPatient ? "Entra direto na lista de Pacientes. Só o nome é obrigatório; o resto pode ser completado depois." : "Interessado ou paciente. Só o nome é obrigatório. O resto pode ser completado depois."}
+      >
         <ContactForm
           idPrefix="new"
+          asPatient={asPatient}
           onDone={(id) => {
             setOpen(false);
             if (id) setGoTo(id);

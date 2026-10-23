@@ -159,7 +159,7 @@ export async function sendEmergencyEmails(clinicId: string, auditId: string): Pr
     const when = new Intl.DateTimeFormat("pt-BR", { timeZone: job.clinic?.tz || clinicTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
       .format(n.at)
       .replace(",", " às");
-    const mail = emergencyEmail({ clinicName: job.clinic?.name ?? "clínica", when, link: `${base}/prontuario/ajustes` });
+    const mail = emergencyEmail({ clinicName: job.clinic?.name ?? "clínica", when, link: `${base}/configuracoes/prontuario` });
     const r = await sendEmail({ to: n.email, subject: mail.subject, html: mail.html, text: mail.text, tag: "pep-emergencia" });
     if (r.ok) sent.push(n.id);
     else console.error("[aviso emergência] e-mail não enviado:", r.errors.join("; "));

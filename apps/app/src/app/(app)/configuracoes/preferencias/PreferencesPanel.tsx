@@ -20,7 +20,7 @@ const SCREENS: { key: string; label: string; href: string; what: string }[] = [
   { key: "eco:agenda:prefs:v1", label: "Agenda", href: "/crm/agenda", what: "densidade, cores, profissionais e filtros" },
   { key: "eco:conversas:prefs:v1", label: "Conversas", href: "/crm/conversas", what: "lista, painel e Enter para enviar" },
   { key: "eco:jornada:prefs:v1", label: "Jornada", href: "/crm/jornada", what: "quadro ou lista, etapas e cartões" },
-  { key: "eco:contatos:prefs:v1", label: "Contatos", href: "/crm/contatos", what: "tabela ou cartões e colunas" },
+  { key: "eco:contatos:prefs:v1", label: "Pacientes e leads", href: "/pacientes", what: "tabela ou cartões e colunas" },
   { key: "eco:espera:prefs:v1", label: "Lista de espera", href: "/crm/espera", what: "visão e densidade" },
   { key: "eco:retornos:prefs:v1", label: "Retornos", href: "/crm/retornos", what: "aba e ordem" },
   { key: "eco:tarefas:prefs:v1", label: "Tarefas", href: "/crm/tarefas", what: "visão, escopo e densidade" },

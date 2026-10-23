@@ -16,6 +16,8 @@ import type { ModuleId, StaffRole } from "@ecosaude/core";
 import { explainDbError } from "./diagnose";
 import * as schema from "./schema";
 import * as crmSchema from "./schema-crm";
+import * as pepSchema from "./schema-pep";
+import { seedDemoExtras } from "./seed-demo-extra";
 import { seedCrmDemo } from "./seed-crm";
 
 const url = process.env.DATABASE_URL;
@@ -248,6 +250,36 @@ async function seedDemo() {
   console.log("Leads, clínica e contratações de demonstração: ok");
 }
 
+/**
+ * Backoffice (aditivo): leads de laboratório e de várias áreas, com anotações da equipe
+ * comercial. Roda mesmo numa base que já tinha os leads antigos.
+ */
+async function seedDemoBackoffice() {
+  const comercial = await db.query.staffUsers.findFirst({ where: eq(schema.staffUsers.role, "comercial") });
+  const day = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const extra = [
+    ["Fernando Castilho", "Laboratório Vida Análises", "11-30", ["lab"], "novo", 0, "Quer ligar o laboratório às clínicas parceiras para receber pedidos pelo prontuário."],
+    ["Renata Vogel", "Imagem Sul Radiologia", "4-10", ["lab", "crm"], "contato", 2, "Pediu demonstração do laudo com código de verificação."],
+    ["Cláudio Prates", "Prótese Arte Dental", "1-3", ["lab"], "demonstracao", 5, "Laboratório de prótese: quer acompanhar etapas e prazos com os dentistas."],
+    ["Elisa Dornelles", "Odonto Prime", "4-10", ["crm", "pep"], "proposta", 8, "Clínica odontológica: interesse nos formulários de odontologia e ortodontia."],
+    ["Mateus Bortolini", "Espaço Mente Psicologia", "4-10", ["pep", "crm"], "contato", 4, "Clínica de psicologia: perguntou sobre sigilo e evolução de sessão."],
+  ] as const;
+  let created = 0;
+  for (const [name, clinicName, size, interests, stage, ago, note] of extra) {
+    const exists = await db.query.leads.findFirst({ where: eq(schema.leads.clinicName, clinicName) });
+    if (exists) continue;
+    const at = new Date(now - ago * day);
+    const [lead] = await db
+      .insert(schema.leads)
+      .values({ name, email: `${name.split(" ")[0]!.toLowerCase()}@exemplo.com.br`, clinicName, size, interests: [...interests], consentAt: at, stage, ownerId: stage === "novo" ? null : (comercial?.id ?? null), createdAt: at, updatedAt: at })
+      .returning({ id: schema.leads.id });
+    if (comercial) await db.insert(schema.leadNotes).values({ leadId: lead!.id, authorId: comercial.id, body: note, createdAt: new Date(at.getTime() + 3_600_000) });
+    created++;
+  }
+  console.log(created ? `Leads extras de demonstração (laboratório, odonto, psicologia): ${created}` : "Leads extras de demonstração: já existiam");
+}
+
 /* ----------------------------------- Main ---------------------------------- */
 
 try {
@@ -255,8 +287,12 @@ try {
   await seedAdmin();
   if (demo) {
     await seedDemo();
+    await seedDemoBackoffice();
     // CRM usa o esquema completo (plataforma + CRM)
     await seedCrmDemo(drizzle(pool, { schema: { ...schema, ...crmSchema } }));
+    // Complemento: histórico, prontuário, LGPD, automações e o dia de hoje (aditivo: só cria o que falta)
+    console.log("Complemento da demonstração:");
+    await seedDemoExtras(drizzle(pool, { schema: { ...schema, ...crmSchema, ...pepSchema } }));
   }
 } catch (error) {
   console.error("Falha no seed.\n");

@@ -55,20 +55,25 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (can("conversas.ver")) nav.push({ href: "/crm/conversas", label: "Conversas", icon: "conversas", badge: ent.features.includes(CRM_FEATURES.inbox) ? waiting : 0, primary: true });
     if (can("agenda.ver")) nav.push({ href: "/crm/agenda", label: "Agenda", icon: "agenda", primary: true });
     if (can("jornada.ver")) nav.push({ href: "/crm/jornada", label: "Jornada", icon: "jornada", primary: true });
-    if (can("pacientes.ver")) nav.push({ href: "/crm/contatos", label: "Contatos", icon: "pacientes" });
     if (can("agenda.ver")) nav.push({ href: "/crm/espera", label: "Espera", icon: "espera" });
     if (can("retornos.gerir")) nav.push({ href: "/crm/retornos", label: "Retornos", icon: "retornos" });
     if (can("tarefas.ver")) nav.push({ href: "/crm/tarefas", label: "Tarefas", icon: "tarefas" });
     if (audit.on && (can("qualidade.ver") || (audit.own && can("conversas.responder")))) nav.push({ href: "/crm/qualidade", label: "Qualidade", icon: "qualidade" });
   }
-  // Prontuário: Consultório (o dia do profissional) e Prontuário (busca, fichas, modelos e ajustes).
-  // Para o profissional de saúde, o Consultório é o primeiro item (e a tela inicial).
-  if (ent.modules.includes("pep")) {
-    const pepItems: NavItem[] = [];
-    if (can("prontuario.consultorio")) pepItems.push({ href: "/consultorio", label: "Consultório", icon: "consultorio", primary: true });
-    if (can("prontuario.ver") || can("prontuario.resumo") || can("prontuario.documentos") || can("prontuario.modelos"))
-      pepItems.push({ href: can("prontuario.ver") || can("prontuario.resumo") || can("prontuario.documentos") ? "/prontuario" : "/prontuario/modelos", label: "Prontuário", icon: "prontuario", primary: user.healthProfessional || !crm });
-    nav.splice(user.healthProfessional || !crm ? 0 : Math.min(3, nav.length), 0, ...pepItems);
+  // PACIENTES: todos os pacientes efetivos (substitui Contatos e Prontuário). Leads ficam em Conversas.
+  // Os formulários e as regras do prontuário ficam em Ajustes > Prontuário (só a gestão).
+  const pep = ent.modules.includes("pep");
+  const pepRead = pep && (can("prontuario.ver") || can("prontuario.resumo") || can("prontuario.documentos") || can("prontuario.triagem"));
+  const patients: NavItem | null = (crm && can("pacientes.ver")) || pepRead ? { href: "/pacientes", label: "Pacientes", icon: "pacientes", primary: user.healthProfessional || !crm } : null;
+  if (patients) nav.splice(Math.min(crm ? 3 : 0, nav.length), 0, patients);
+  // Consultório (o dia do profissional): para o profissional de saúde, o primeiro item (e a tela inicial)
+  if (pep && can("prontuario.consultorio")) {
+    const consultorio: NavItem = { href: "/consultorio", label: "Consultório", icon: "consultorio", primary: true };
+    if (user.healthProfessional || !crm) {
+      // Profissional: Consultório e Pacientes no começo
+      if (patients) nav.splice(nav.indexOf(patients), 1);
+      nav.unshift(...[consultorio, patients].filter((x): x is NavItem => !!x));
+    } else nav.splice(Math.min(3, nav.length), 0, consultorio);
   }
   nav.push({ href: "/configuracoes", label: "Ajustes", icon: "config" });
 

@@ -51,13 +51,13 @@ const today = () => new Date().toLocaleDateString("sv-SE");
 const nowTime = () => new Date().toTimeString().slice(0, 5);
 const emptyItem = (): Item => ({ medication: "", instructions: "", quantity: "", route: "oral" });
 
-export function DocumentButtons({ encounterId, diagnoses, allergies, startedAt }: { encounterId: string; diagnoses: Diagnosis[]; allergies: string[]; startedAt: string }) {
+export function DocumentButtons({ encounterId, diagnoses, allergies, startedAt, kinds }: { encounterId: string; diagnoses: Diagnosis[]; allergies: string[]; startedAt: string; /** Documentos que a área do profissional emite */ kinds?: readonly DocumentKind[] }) {
   const [kind, setKind] = useState<DocumentKind | null>(null);
   return (
     <>
       {/* Duas colunas no celular (largura toda); uma coluna na lateral estreita do computador */}
       <ul className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-        {(Object.keys(DOCUMENT_KIND_LABEL) as DocumentKind[]).map((k) => (
+        {(Object.keys(DOCUMENT_KIND_LABEL) as DocumentKind[]).filter((k) => !kinds || kinds.includes(k)).map((k) => (
           <li key={k} className={k === "receita_especial" ? "col-span-2 lg:col-span-1" : undefined}>
             <button type="button" onClick={() => setKind(k)} className="flex min-h-11 w-full items-center gap-2 rounded-xl bg-fog px-3 text-left text-sm font-semibold hover:bg-pep-tint hover:text-pep-ink">
               <FileText className="size-4 shrink-0" aria-hidden />

@@ -47,7 +47,7 @@ test("acesso de emergência avisa a gestão do prontuário no sino, com prova de
     await expect(panel.getByText(new RegExp(`abriu o prontuário de ${patient}`))).toBeVisible();
     await expect(panel.getByText(/Paciente passando mal na recepção/)).toBeVisible();
     await panel.getByRole("button", { name: /Acesso de emergência ao prontuário/ }).click();
-    await expect(g).toHaveURL(/\/prontuario\/ajustes/);
+    await expect(g).toHaveURL(/\/configuracoes\/prontuario$/);
     const gestorId = await userId(GESTOR);
     await expect.poll(() => value<boolean>("select read_at is not null from user_notices where user_id = $1", [gestorId])).toBe(true);
     await expect(g.getByTestId("notice-count")).toHaveCount(0);
@@ -58,7 +58,7 @@ test("acesso de emergência avisa a gestão do prontuário no sino, com prova de
 
   await test.step("Ajuste de e-mail opcional e sino no celular sem rolagem lateral", async () => {
     const g = await as("gestor", { width: 390, height: 844 });
-    await g.goto("/prontuario/ajustes");
+    await g.goto("/configuracoes/prontuario");
     await g.locator("#ps-email").check();
     await g.getByRole("button", { name: "Salvar ajustes" }).click();
     await expect.poll(() => value<boolean>("select emergency_email from pep_settings")).toBe(true);

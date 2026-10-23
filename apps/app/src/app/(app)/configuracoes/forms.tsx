@@ -1,6 +1,7 @@
 "use client";
 
 import { BR_TIME_ZONES, suggestTimeZone, timeZoneLabel, type WeeklySchedule } from "@ecosaude/core/crm";
+import { SPECIALTIES } from "@ecosaude/core/pep";
 import { Copy, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
@@ -395,7 +396,13 @@ function ProfessionalForm({ initial, users, places, onSaved }: { initial: Profes
       {initial.id ? <input type="hidden" name="id" value={initial.id} /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome" name="name" id={`pro-name-${p}`} placeholder="Dra. Ana Souza" defaultValue={val("name")} error={state.errors?.name} />
-        <Field label="Especialidade" name="specialty" id={`pro-spec-${p}`} placeholder="Dermatologia" defaultValue={val("specialty")} />
+        {/* Lista do catálogo: com o nome reconhecido, o prontuário abre os formulários da especialidade */}
+        <Field label="Especialidade" name="specialty" id={`pro-spec-${p}`} placeholder="Dermatologia" defaultValue={val("specialty")} list={`pro-spec-list-${p}`} hint="Escolha da lista para o prontuário abrir os formulários da especialidade." />
+        <datalist id={`pro-spec-list-${p}`}>
+          {SPECIALTIES.map((s) => (
+            <option key={s.key} value={s.label} />
+          ))}
+        </datalist>
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_5rem] gap-3">
         <Field label="Conselho" name="council" id={`pro-council-${p}`} placeholder="CRM" defaultValue={val("council")} error={state.errors?.council} />

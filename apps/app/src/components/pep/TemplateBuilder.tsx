@@ -1,6 +1,6 @@
 "use client";
 
-import { FIELD_TYPE_LABEL, FIELD_TYPES, type FieldType, type TemplateField } from "@ecosaude/core/pep";
+import { FIELD_TYPE_LABEL, FIELD_TYPES, SPECIALTIES, TEMPLATE_KIND_LABEL, type FieldType, type TemplateField, type TemplateKind } from "@ecosaude/core/pep";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -17,6 +17,8 @@ export interface TemplateValues {
   id: string | null;
   specialty: string;
   name: string;
+  /** Primeira consulta, retorno ou outro: o Tropi usa para abrir o formulário certo */
+  kind: TemplateKind | "";
   fields: TemplateField[];
 }
 
@@ -84,14 +86,22 @@ export function TemplateBuilder({ initial, specialties, trigger }: { initial: Te
       )}
       <Dialog open={open} onClose={() => setOpen(false)} title={initial.id ? `Editar: ${initial.name}` : "Novo modelo"} description="Atendimentos já registrados guardam a versão antiga do modelo: editar não muda o passado." wide>
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Especialidade" name="specialty" id="tb-sp" list="tb-specialties" value={v.specialty} onChange={(e) => setV({ ...v, specialty: e.target.value })} placeholder="Ex.: Nutrição" />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field label="Especialidade" name="specialty" id="tb-sp" list="tb-specialties" value={v.specialty} onChange={(e) => setV({ ...v, specialty: e.target.value })} placeholder="Ex.: Nutrição clínica" hint="Use o nome da lista para o Tropi ligar ao profissional." />
             <datalist id="tb-specialties">
-              {specialties.map((s) => (
+              {[...new Set([...specialties, ...SPECIALTIES.map((s) => s.label)])].map((s) => (
                 <option key={s} value={s} />
               ))}
             </datalist>
             <Field label="Nome do modelo" name="name" id="tb-name" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Ex.: Primeira consulta" />
+            <SelectField label="Usado em" name="kind" id="tb-kind" value={v.kind} onChange={(e) => setV({ ...v, kind: e.target.value as TemplateKind | "" })}>
+              <option value="">Só quando escolhido</option>
+              {(Object.keys(TEMPLATE_KIND_LABEL) as TemplateKind[]).map((k) => (
+                <option key={k} value={k}>
+                  {TEMPLATE_KIND_LABEL[k]}
+                </option>
+              ))}
+            </SelectField>
           </div>
 
           <ol className="space-y-2">

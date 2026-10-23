@@ -9,8 +9,10 @@ export interface ContactRow {
   phone: string | null;
   email: string | null;
   stage: JourneyStage;
-  /** Paciente = já compareceu a ao menos uma consulta */
+  /** Paciente = cadastrado como paciente, com consulta marcada ou já atendido (ver contacts-list.ts) */
   kind: "lead" | "paciente";
+  /** Alergia registrada no prontuário (só para quem vê o resumo de segurança) */
+  allergy?: boolean;
   tags: string[];
   channel: Channel | null;
   source: string | null;
@@ -48,6 +50,25 @@ export interface ContactsData {
   canExport: boolean;
   /** Pedidos LGPD em aberto (só para quem pode decidir) */
   privacy: { open: number; late: number } | null;
+  /**
+   * Lista com um só tipo de pessoa: "Pacientes" (menu) ou "Leads" (dentro de Conversas).
+   * Sem escopo, a lista mistura os dois (uso antigo).
+   */
+  scope?: {
+    kind: "paciente" | "lead";
+    /** Endereço da lista (os filtros vão na URL dele) */
+    path: string;
+    title: string;
+    description: string;
+    /** Atalho para a outra lista (ex.: "Ver leads em Conversas") */
+    other?: { href: string; label: string; count: number } | null;
+  };
+  /** Atendimento (CRM) contratado: conversa, agenda, etapas e o painel do contato */
+  crm?: boolean;
+  /** Prontuário: atalho para o prontuário do paciente em cada linha */
+  pep?: { canOpen: boolean } | null;
+  /** Rótulo do botão de cadastro (Pacientes: "Cadastrar paciente") */
+  newLabel?: string;
 }
 
 /** Colunas opcionais da tabela (cada pessoa escolhe as suas) */

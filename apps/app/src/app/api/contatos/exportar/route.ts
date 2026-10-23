@@ -66,7 +66,7 @@ export async function GET(req: Request) {
     r.name,
     r.phone ?? "",
     r.email ?? "",
-    r.visits > 0 ? "Paciente" : "Interessado",
+    r.patient ? "Paciente" : "Interessado",
     JOURNEY_STAGE_LABEL[r.stage],
     r.channel ? CHANNEL_LABEL[r.channel] : "",
     r.source ?? "",

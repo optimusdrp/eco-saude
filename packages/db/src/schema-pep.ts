@@ -14,7 +14,7 @@
  * Isolamento entre clínicas: igual ao CRM (clinic_id + Row-Level Security).
  * Exceção: `cid10`, tabela de referência pública (DATASUS), igual para todas as clínicas.
  */
-import type { AccessMode, Answers, Diagnosis, DocumentContent, DocumentKind, TemplateField, Vitals } from "@ecosaude/core/pep";
+import type { AccessMode, Answers, ClinicArea, Diagnosis, DocumentContent, DocumentKind, TemplateField, TemplateKind, Vitals } from "@ecosaude/core/pep";
 import { sql } from "drizzle-orm";
 import { boolean, index, inet, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { clinics } from "./schema";
@@ -81,6 +81,11 @@ export const pepSettings = pgTable("pep_settings", {
    * um acesso e o link para ver no Tropi.
    */
   emergencyEmail: boolean("emergency_email").notNull().default(false),
+  /**
+   * Áreas em que a clínica atende (medicina, odontologia, psicologia...): definem os formulários
+   * prontos instalados e servem de reserva quando a especialidade do profissional não é reconhecida.
+   */
+  areas: text("areas").array().$type<ClinicArea[]>().notNull().default(sql`'{}'`),
   updatedBy: uuid("updated_by").references(() => clinicUsers.id, { onDelete: "set null" }),
   updatedAt: updatedAt(),
 });
@@ -93,6 +98,10 @@ export const pepTemplates = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     clinicId: clinicId(),
     specialty: text("specialty").notNull(),
+    /** Especialidade do catálogo do Tropi (SPECIALTIES.key). Vazio = modelo próprio da clínica */
+    specialtyKey: text("specialty_key"),
+    /** primeira | retorno | outro: o Tropi usa para escolher o formulário certo no atendimento */
+    kind: text("kind").$type<TemplateKind>(),
     name: text("name").notNull(),
     fields: jsonb("fields").$type<TemplateField[]>().notNull(),
     /** Modelo pronto do Tropi (BUILT_IN_TEMPLATES.key). A clínica pode editar a cópia dela. */

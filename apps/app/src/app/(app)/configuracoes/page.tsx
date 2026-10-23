@@ -109,9 +109,11 @@ export default async function SettingsHome() {
     duracoes: "Duração real por profissional e procedimento",
     unidades: `${activeUnits} ${activeUnits === 1 ? "unidade" : "unidades"}, ${rooms[0]?.n ?? 0} ${(rooms[0]?.n ?? 0) === 1 ? "consultório" : "consultórios"}`,
     ia: aiOn ? `${aiOn} de ${AI_FEATURES.length} funcionalidades ligadas` : `Desligada. ${AI_FEATURES.length} funcionalidades disponíveis`,
+    prontuario: "Áreas da clínica, sigilo e acessos sensíveis",
+    formularios: "Formulários por especialidade e por profissional",
     plano: `Módulos: ${entitlements.modules.map((m) => m.toUpperCase()).join(", ") || "nenhum"}. ${entitlements.features.length} funcionalidades`,
   };
-  const groups = visibleGroups(can);
+  const groups = visibleGroups(can, entitlements.modules);
   const r = 26;
   const c = 2 * Math.PI * r;
 

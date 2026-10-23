@@ -1,5 +1,5 @@
 import "server-only";
-import { recordAccess, type AccessMode } from "@ecosaude/core/pep";
+import { CLINIC_AREAS, recordAccess, type AccessMode, type ClinicArea } from "@ecosaude/core/pep";
 import { and, desc, eq, gt, schema, sql, type Tx } from "@ecosaude/db";
 import type { PepAuditAction } from "@ecosaude/db/schema-pep";
 import type { PepContext } from "@/lib/auth/dal";
@@ -23,11 +23,13 @@ export interface PepSettingsRow {
   defaultReturnDays: number | null;
   /** Avisar a gestão também por e-mail no acesso de emergência (sem dado do paciente) */
   emergencyEmail: boolean;
+  /** Áreas em que a clínica atende (vazio = o Tropi deduz pelos profissionais) */
+  areas: ClinicArea[];
 }
 
 export async function loadPepSettings(tx: Tx): Promise<PepSettingsRow> {
   const [row] = await tx.select().from(schema.pepSettings).limit(1);
-  return { accessMode: row?.accessMode ?? "todos", headerNote: row?.headerNote ?? null, defaultReturnDays: row?.defaultReturnDays ?? null, emergencyEmail: row?.emergencyEmail ?? false };
+  return { accessMode: row?.accessMode ?? "todos", headerNote: row?.headerNote ?? null, defaultReturnDays: row?.defaultReturnDays ?? null, emergencyEmail: row?.emergencyEmail ?? false, areas: (row?.areas ?? []).filter((a): a is ClinicArea => (CLINIC_AREAS as readonly string[]).includes(a)) };
 }
 
 /** Profissional ligado ao usuário (Ajustes > Clínica > Profissionais > "acesso") */

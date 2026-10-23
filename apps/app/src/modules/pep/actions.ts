@@ -3,6 +3,12 @@
 import { contactSchema } from "@ecosaude/core/crm/validation";
 import {
   ACCESS_MODES,
+  BUILT_IN_TEMPLATES,
+  CLINIC_AREAS,
+  matchSpecialty,
+  specialtyByKey,
+  type ClinicArea,
+  type TemplateKind,
   documentContentSchema,
   emergencyNoticeText,
   normalizeCidCode,
@@ -20,7 +26,7 @@ import {
 } from "@ecosaude/core/pep";
 import { formatTime } from "@ecosaude/core/crm";
 import { flattenErrors } from "@ecosaude/core/validation";
-import { eq, inArray, schema, sql, withTenant, type Tx } from "@ecosaude/db";
+import { and, eq, inArray, schema, sql, withTenant, type Tx } from "@ecosaude/db";
 import { TRIAGE_PRIORITIES, type Allergy, type MedicationInUse, type Problem, type TriagePriority } from "@ecosaude/db/schema-pep";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
@@ -34,7 +40,7 @@ import { accessFor, audit } from "./access";
 import { runCrm } from "@/modules/crm/run";
 import { changeAppointmentStatus } from "@/modules/crm/scheduling";
 import { createNotices, emergencyNoticeRecipients, sendEmergencyEmails } from "@/modules/notices";
-import { addAddendum, finalizeEncounter, issueDocument, loadEncounter, revokeDocument, saveDraft, startEncounter, type EncounterRecord } from "./records";
+import { addAddendum, changeTemplate, finalizeEncounter, installTemplates, issueDocument, loadEncounter, revokeDocument, saveDraft, startEncounter, type EncounterRecord } from "./records";
 
 /**
  * Ações do Tropi Prontuário. Toda ação confere, nesta ordem:
@@ -90,6 +96,25 @@ export async function startEncounterAction(_prev: ActionState, form: FormData): 
   revalidatePath("/prontuario");
   revalidatePath("/crm/agenda");
   redirect(`/prontuario/atendimentos/${id}`);
+}
+
+/** Troca o formulário do atendimento em rascunho (só quem atende) */
+export async function changeTemplateAction(encounterId: string, templateId: string): Promise<ActionState> {
+  const ctx = await authorizePep("prontuario.atender");
+  if (!ctx) return NOT_ALLOWED;
+  if (!z.uuid().safeParse(encounterId).success || !z.uuid().safeParse(templateId).success) return { ok: false, message: "Formulário inválido." };
+  try {
+    const e = await pep(ctx)(async (tx) => {
+      const e = await encounterFor(tx, ctx, encounterId);
+      assertAuthor(ctx, e);
+      await changeTemplate(tx, e, templateId);
+      return e;
+    });
+    refresh(e);
+    return { ok: true, message: "Formulário trocado." };
+  } catch (e) {
+    return toActionError(e);
+  }
 }
 
 const draftSchema = z.object({
@@ -337,7 +362,7 @@ export async function emergencyAccessAction(_prev: ActionState, form: FormData):
       const [patient] = await tx.select({ name: schema.contacts.name }).from(schema.contacts).where(eq(schema.contacts.id, contactId));
       const text = emergencyNoticeText({ actorName: ctx.user.name, patientName: patient?.name ?? "paciente", reason });
       const recipients = await emergencyNoticeRecipients(tx, ctx.user.id);
-      await createNotices(tx, recipients.map((userId) => ({ ...text, userId, kind: "pep_emergencia", href: "/prontuario/ajustes", contactId, refId: id, urgent: true })));
+      await createNotices(tx, recipients.map((userId) => ({ ...text, userId, kind: "pep_emergencia", href: "/configuracoes/prontuario", contactId, refId: id, urgent: true })));
       return id;
     });
     // E-mail opcional (sem dado do paciente), depois de responder a quem pediu o acesso
@@ -405,36 +430,84 @@ export async function createPatientAction(_prev: ActionState, form: FormData): P
 }
 
 /* ---------------------------------- Modelos ---------------------------------- */
+/* (a gestão configura em Ajustes > Prontuário > Formulários) */
+
+const MODELOS_PATH = "/configuracoes/prontuario/modelos";
+
+/** Adiciona os formulários prontos de uma especialidade da biblioteca do Tropi */
+export async function installSpecialtyAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const ctx = await authorizePep("prontuario.modelos");
+  if (!ctx) return NOT_ALLOWED;
+  const spec = specialtyByKey(field(form, "specialty"));
+  if (!spec) return { ok: false, message: "Especialidade não encontrada." };
+  const keys = BUILT_IN_TEMPLATES.filter((t) => t.specialtyKey === spec.key).map((t) => t.key);
+  const n = await pep(ctx)((tx) => installTemplates(tx, keys));
+  revalidatePath(MODELOS_PATH);
+  return { ok: true, message: n ? `${spec.label}: ${n} ${n === 1 ? "formulário adicionado" : "formulários adicionados"}.` : `${spec.label} já está na clínica.` };
+}
+
+/**
+ * Formulário de primeira consulta e de retorno de cada profissional (vazio = automático pela
+ * especialidade). O banco recusa modelo de outra clínica (gatilho da migração 0037).
+ */
+export async function saveProfessionalTemplatesAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const ctx = await authorizePep("prontuario.modelos");
+  if (!ctx) return NOT_ALLOWED;
+  const id = field(form, "professionalId");
+  const uuidOrNull = (v: string) => (z.uuid().safeParse(v).success ? v : null);
+  if (!z.uuid().safeParse(id).success) return { ok: false, message: "Profissional inválido." };
+  const firstTemplateId = uuidOrNull(field(form, "firstTemplateId"));
+  const returnTemplateId = uuidOrNull(field(form, "returnTemplateId"));
+  try {
+    await pep(ctx)(async (tx) => {
+      const ids = [firstTemplateId, returnTemplateId].filter((v): v is string => !!v);
+      if (ids.length) {
+        const found = await tx.select({ id: schema.pepTemplates.id }).from(schema.pepTemplates).where(and(inArray(schema.pepTemplates.id, ids), eq(schema.pepTemplates.active, true)));
+        if (found.length !== new Set(ids).size) throw new UserError("Formulário não encontrado ou desativado.");
+      }
+      const [row] = await tx.update(schema.professionals).set({ firstTemplateId, returnTemplateId }).where(eq(schema.professionals.id, id)).returning({ id: schema.professionals.id });
+      if (!row) throw new UserError("Profissional não encontrado.");
+    });
+  } catch (err) {
+    return toActionError(err);
+  }
+  revalidatePath(MODELOS_PATH);
+  return { ok: true, message: "Formulários do profissional salvos." };
+}
 
 const templateSchema = z.object({
   id: z.uuid().nullable(),
   specialty: z.string().trim().min(2, "Especialidade").max(80),
   name: z.string().trim().min(2, "Nome do modelo").max(80),
+  kind: z.union([z.enum(["primeira", "retorno", "outro"]), z.literal("")]).default(""),
   fields: templateFieldsSchema,
 });
 
-export async function saveTemplateAction(payload: { id: string | null; specialty: string; name: string; fields: TemplateField[] }): Promise<ActionState> {
+export async function saveTemplateAction(payload: { id: string | null; specialty: string; name: string; kind?: TemplateKind | ""; fields: TemplateField[] }): Promise<ActionState> {
   const ctx = await authorizePep("prontuario.modelos");
   if (!ctx) return NOT_ALLOWED;
   const parsed = templateSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Confira o modelo.", errors: flattenErrors(parsed.error) };
   const d = parsed.data;
   let id = d.id;
+  // Liga o modelo à especialidade do catálogo pelo nome (ex.: "Dermatologia"), para o Tropi
+  // abrir este formulário para os dermatologistas
+  const link = { specialtyKey: matchSpecialty(d.specialty)?.key ?? null, kind: d.kind || null };
   try {
     await pep(ctx)(async (tx) => {
       // Atendimentos antigos guardam a cópia dos campos: editar o modelo não muda o passado
       if (d.id) {
-        const [row] = await tx.update(schema.pepTemplates).set({ specialty: d.specialty, name: d.name, fields: d.fields }).where(eq(schema.pepTemplates.id, d.id)).returning({ id: schema.pepTemplates.id });
+        const [row] = await tx.update(schema.pepTemplates).set({ specialty: d.specialty, name: d.name, fields: d.fields, ...link }).where(eq(schema.pepTemplates.id, d.id)).returning({ id: schema.pepTemplates.id });
         if (!row) throw new UserError("Modelo não encontrado.");
       } else {
-        const [row] = await tx.insert(schema.pepTemplates).values({ specialty: d.specialty, name: d.name, fields: d.fields, createdBy: ctx.user.id }).returning({ id: schema.pepTemplates.id });
+        const [row] = await tx.insert(schema.pepTemplates).values({ specialty: d.specialty, name: d.name, fields: d.fields, ...link, createdBy: ctx.user.id }).returning({ id: schema.pepTemplates.id });
         id = row!.id;
       }
     });
   } catch (err) {
     return toActionError(err);
   }
-  revalidatePath("/prontuario/modelos");
+  revalidatePath(MODELOS_PATH);
   return { ok: true, message: "Modelo salvo.", data: { id } };
 }
 
@@ -444,7 +517,7 @@ export async function toggleTemplateAction(_prev: ActionState, form: FormData): 
   const id = field(form, "id");
   const active = field(form, "active") === "1";
   await pep(ctx)((tx) => tx.update(schema.pepTemplates).set({ active }).where(eq(schema.pepTemplates.id, id)));
-  revalidatePath("/prontuario/modelos");
+  revalidatePath(MODELOS_PATH);
   return { ok: true, message: active ? "Modelo ativado." : "Modelo desativado (atendimentos antigos continuam iguais)." };
 }
 
@@ -462,7 +535,10 @@ export async function savePepSettingsAction(_prev: ActionState, form: FormData):
     .safeParse({ accessMode: field(form, "accessMode"), headerNote: field(form, "headerNote"), defaultReturnDays: field(form, "defaultReturnDays") });
   if (!parsed.success) return { ok: false, errors: flattenErrors(parsed.error), values: formValues(form) };
   const d = parsed.data;
+  // Áreas em que a clínica atende (caixas marcadas); só valores do catálogo
+  const areas = form.getAll("areas").map(String).filter((a): a is ClinicArea => (CLINIC_AREAS as readonly string[]).includes(a));
   const values = {
+    areas,
     accessMode: d.accessMode,
     headerNote: d.headerNote || null,
     defaultReturnDays: d.defaultReturnDays === "" ? null : d.defaultReturnDays,
@@ -471,7 +547,7 @@ export async function savePepSettingsAction(_prev: ActionState, form: FormData):
     updatedBy: ctx.user.id,
   };
   await pep(ctx)((tx) => tx.insert(schema.pepSettings).values(values).onConflictDoUpdate({ target: schema.pepSettings.clinicId, set: values }));
-  revalidatePath("/prontuario/ajustes");
+  revalidatePath("/configuracoes/prontuario", "layout");
   return { ok: true, message: "Ajustes salvos." };
 }
 

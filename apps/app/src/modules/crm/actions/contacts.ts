@@ -66,6 +66,8 @@ export async function createContactAction(_prev: ActionState, form: FormData): P
         consentMarketing: d.consentMarketing,
         consentAt: d.consentMarketing ? new Date() : null,
         ownerId: scope.actorId,
+        // Cadastrado pela página Pacientes: já é paciente (aparece em Pacientes, não em Leads)
+        ...(form.get("asPatient") === "1" ? { stage: "paciente" as const } : {}),
       })
       .returning({ id: schema.contacts.id });
     if (d.phone) await tx.insert(schema.contactIdentities).values({ contactId: c!.id, channel: "whatsapp", externalId: d.phone, displayName: d.name }).onConflictDoNothing();
@@ -76,6 +78,7 @@ export async function createContactAction(_prev: ActionState, form: FormData): P
   if (id instanceof DuplicateError) return { ok: false, message: id.message, values: formValues(form), data: { duplicate: true } };
   if (id instanceof Error) return { ...toActionError(id), values: formValues(form) };
   revalidatePath("/crm/contatos");
+  revalidatePath("/pacientes");
   revalidatePath("/crm/jornada");
   return { ok: true, message: "Paciente cadastrado.", data: { contactId: id } };
 }

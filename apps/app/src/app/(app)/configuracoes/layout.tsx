@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth/dal";
+import { getEntitlements, requireUser } from "@/lib/auth/dal";
 import { visibleGroups } from "./catalog";
 import { SettingsTabs } from "./SettingsTabs";
 
@@ -9,7 +9,8 @@ import { SettingsTabs } from "./SettingsTabs";
  */
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const groups = visibleGroups((p) => user.permissions.includes(p));
+  const { modules } = await getEntitlements(user.clinicId);
+  const groups = visibleGroups((p) => user.permissions.includes(p), modules);
   return (
     <div className="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
       <SettingsTabs groups={groups} />

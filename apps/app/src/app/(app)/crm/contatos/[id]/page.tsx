@@ -111,8 +111,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     const when = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: clinicTimeZone() });
     return (
       <>
-        <Link href="/crm/contatos" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
-          <ArrowLeft className="size-4" aria-hidden /> Contatos
+        <Link href="/pacientes" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
+          <ArrowLeft className="size-4" aria-hidden /> Pacientes
         </Link>
         <section className="max-w-2xl rounded-3xl bg-paper p-5 ring-1 ring-line sm:p-6">
           <ShieldCheck className="size-8 text-ok" aria-hidden />
@@ -142,8 +142,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <Link href="/crm/contatos" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden /> Contatos
+      <Link href="/pacientes" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
+        <ArrowLeft className="size-4" aria-hidden /> Pacientes
       </Link>
 
       {/* ------------------------------ Cabeçalho ------------------------------ */}

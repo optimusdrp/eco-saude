@@ -8,7 +8,7 @@
  * - Itens com anel de espera ao vivo, não lidas, urgência, intenção, rascunho e adiada
  */
 import { CHANNEL_LABEL, CHANNELS, FIRST_RESPONSE_TARGET_MIN } from "@ecosaude/core/crm";
-import { AlertTriangle, ArrowDownUp, CheckSquare, Flame, PencilLine, Search, Settings2, Sparkles, X } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, CheckSquare, Flame, PencilLine, Search, Settings2, Sparkles, X, UserSearch } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
@@ -96,6 +96,11 @@ export function ConversationList({
       <div className="space-y-2.5 border-b border-line p-3">
         <div className="flex items-center gap-2 px-1">
           <h1 className="flex-1 text-xl font-bold">Conversas</h1>
+          {/* Leads (quem ainda não marcou consulta) ficam numa aba de Conversas */}
+          <Link href="/crm/conversas/leads" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-crm hover:bg-crm-tint">
+            <UserSearch className="size-4" aria-hidden />
+            Leads
+          </Link>
           {canReply ? (
             <button
               type="button"

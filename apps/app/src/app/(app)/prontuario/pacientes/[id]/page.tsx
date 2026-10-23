@@ -57,9 +57,9 @@ export default async function PatientRecordPage({ params }: { params: Promise<{ 
   const { patient } = result;
 
   const back = (
-    <Link href="/prontuario" className="mb-3 inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink">
+    <Link href="/pacientes" className="mb-3 inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink">
       <ArrowLeft className="size-4" aria-hidden />
-      Prontuário
+      Pacientes
     </Link>
   );
 

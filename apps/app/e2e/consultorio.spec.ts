@@ -122,9 +122,11 @@ test("consultório, triagem pela recepção e perfil de profissional de saúde d
 
     await g.goto("/");
     await expect(g).toHaveURL(/\/consultorio$/);
+    // Profissional de saúde sem profissional da agenda ligado: o Consultório explica por que não há "Atender"
+    await expect(g.getByTestId("aviso-vinculo")).toBeVisible();
     await g.goto(`/prontuario/pacientes/${contactId}`);
     await expect(g.locator("details").first()).toBeVisible();
-    await g.goto("/prontuario/ajustes");
+    await g.goto("/configuracoes/prontuario");
     await expect(g.getByText("Quem vê o quê no prontuário")).toBeVisible();
   });
 

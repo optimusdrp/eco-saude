@@ -82,6 +82,34 @@ pnpm dev
 #    Clínica/CRM: http://localhost:3002
 ```
 
+### Dados de demonstração (`pnpm db:seed -- --demo`)
+
+Cria a **Clínica Exemplo** com dados fictícios para testar todas as telas. É **aditivo**: numa
+base que já tem a clínica, só acrescenta o que falta, e num dia novo monta de novo o "dia de hoje"
+do Consultório. Rodar duas vezes não duplica nada. Senha de todos: `Demo-EcoSaude-2026` (troca
+obrigatória no primeiro acesso).
+
+| Login | Quem é | Para testar |
+|---|---|---|
+| `gestor@clinicaexemplo.com.br` | Marta, gestão | Hoje, Ajustes (inclusive Prontuário > Formulários e Regras e acessos), LGPD, automações, sino com acesso de emergência |
+| `recepcao@clinicaexemplo.com.br` | Paula, recepção | Conversas, Leads, Agenda, Pacientes, Espera, Retornos, Tarefas |
+| `beatriz@clinicaexemplo.com.br` | Dra. Beatriz, dermatologia | Consultório do dia (triagem urgente, em atendimento, chegou), prontuários, documentos |
+| `caio@clinicaexemplo.com.br` | Dr. Caio, clínica geral | Consultório com outra especialidade e outros formulários |
+| `enfermagem@clinicaexemplo.com.br` | Joana, enfermagem | Perfil próprio "Enfermagem": triagem sem prontuário completo |
+| `gestor@olhar.exemplo.com.br` | Outra clínica | Isolamento: não vê nada da Clínica Exemplo |
+
+O que entra (arquivos `packages/db/src/seed-crm.ts` e `seed-demo-extra.ts`):
+
+- **Atendimento:** 14 conversas (urgência, fora das 24h, esperando há muito tempo), leads e perdidos com motivo, lista de espera, respostas rápidas, protocolos de retorno, tarefas (atrasada, de hoje, de retorno), mensagens personalizadas e 3 automações próprias com histórico.
+- **Histórico de 8 meses:** 60 pacientes e cerca de 550 consultas (compareceu, faltou, cancelou) com chegada e fim registrados e pesquisa de satisfação. Alimenta Duração das consultas, o risco de falta aprendido (Ajustes > Inteligência artificial), Retornos, Jornada, aniversariantes e quem precisa ser reativado.
+- **Prontuário:** formulários de clínica geral, dermatologia e pediatria; resumo clínico (alergias, medicamentos, problemas); cerca de 200 atendimentos finalizados com hash; receitas e pedidos de exame com código de verificação (um cancelado); adendo; atendimento esquecido em rascunho; acesso de emergência com aviso no sino.
+- **Dia de hoje (Consultório):** finalizados, falta, em atendimento, triagem urgente e prioritária, chegou e quem ainda vai chegar, para a Dra. Beatriz e o Dr. Caio.
+- **Gestão e LGPD:** pedidos LGPD (no prazo, atrasado e recusado), recesso de unidade, férias de profissional, perfil de cargo "Enfermagem".
+- **Backoffice:** leads de clínicas e de laboratórios (interesse no módulo Laboratório), com anotações.
+
+Fica de fora de propósito: anexos de conversa (precisam de arquivo de verdade) e resultados de IA
+(rascunhos, resumos, auditoria de atendimento), que aparecem quando a IA é ligada em Ajustes.
+
 > **Atualizou os arquivos do projeto?** Rode `pnpm install` e depois `pnpm dev`: as migrações
 > novas são aplicadas automaticamente antes de subir os apps. Se o banco estiver desatualizado
 > mesmo assim (ex.: subiu com `turbo` direto), o backoffice e o ambiente da clínica mostram uma
@@ -917,13 +945,20 @@ Modelos (dá para trocar pelo `.env`, sem mexer no código):
 - **principal:** `gemini-3.8-flash`, o Flash estável recomendado pelo Google em out/2026;
 - **reserva e classificação:** `gemini-3.5-flash-lite`.
 
-### Contatos
+### Pacientes e Leads
 
-Endereço: `/crm/contatos` (o antigo `/crm/pacientes` redireciona para cá). Filtros na URL, por exemplo
-`?tipo=lead&segmento=novos&origem=instagram&ordem=recentes`.
+São duas listas com os mesmos filtros e ações:
 
-- **Lead x paciente:** paciente é quem já compareceu a ao menos uma consulta; lead é quem ainda não.
-  A barra "Leads | Pacientes" do topo mostra a proporção e filtra com um toque.
+| Lista | Endereço | Quem aparece |
+|---|---|---|
+| **Pacientes** (menu) | `/pacientes` | **Paciente efetivo**: etapa Paciente ou Reativar, **ou** consulta marcada não cancelada, **ou** atendimento no prontuário |
+| **Leads** (aba de Conversas) | `/crm/conversas/leads` | Todo o resto: conversou ou pediu orçamento, mas ainda não marcou |
+
+- A regra fica num lugar só: `isPatient` em `apps/app/src/modules/crm/contacts-list.ts` (lista, números e exportação usam a mesma).
+- **"Cadastrar paciente"** em Pacientes já cria com a etapa Paciente. **"Novo lead"** em Leads cria como Novo contato. Ao marcar a primeira consulta, o lead passa sozinho para Pacientes.
+- Pacientes junta Atendimento e Prontuário: o nome abre o painel do contato; o ícone do coração abre o **prontuário** (para quem tem acesso); a etiqueta **Alergia** aparece para quem vê o resumo de segurança. Clínica só com o Prontuário: o nome abre o prontuário e o cadastro é o do Prontuário.
+- Endereços antigos redirecionam com os filtros: `/crm/contatos` vai para Pacientes (`?tipo=lead` vai para Leads) e `/prontuario` vai para Pacientes.
+- Filtros na URL, por exemplo `/crm/conversas/leads?segmento=novos&origem=instagram&ordem=recentes`.
 - **Números da base:** novos em 30 dias, sem consentimento LGPD e aniversariantes do mês (clique filtra).
 - **Busca ao digitar** (nome, celular ou e-mail, sem acento; tecla /).
 - **Filtros:** etapa (com contagem), segmentos prontos (aniversariantes, novos, com consulta marcada,
@@ -1229,11 +1264,20 @@ consulta da agenda ganha o botão **Abrir atendimento no prontuário**.
 
 | Tela | O que faz |
 |---|---|
-| `/prontuario` | Consultas de hoje do profissional, atendimentos não finalizados, busca de paciente e cadastro rápido |
+| `/pacientes` | Lista de pacientes efetivos com atalho para o prontuário (o antigo `/prontuario` redireciona para cá) |
 | `/prontuario/pacientes/<id>` | Resumo clínico (alergias, medicamentos, problemas, antecedentes) e linha do tempo com adendos e documentos |
 | `/prontuario/atendimentos/<id>` | Modelo da especialidade, sinais vitais com IMC e alertas, CID-10, conduta, retorno, documentos, finalizar |
-| `/prontuario/modelos` | Modelos de anamnese/evolução (os do Tropi vêm prontos: clínica geral, primeira consulta e retorno) |
-| `/prontuario/ajustes` | Regra de sigilo, cabeçalho dos documentos, profissionais com cadastro incompleto e acessos sensíveis |
+| `/configuracoes/prontuario/modelos` | **Ajustes > Prontuário > Formulários** (só gestão): formulário de cada profissional, formulários da clínica e a biblioteca por especialidade |
+| `/configuracoes/prontuario` | **Ajustes > Prontuário > Regras e acessos** (só gestão): áreas da clínica, sigilo, cabeçalho dos documentos e acessos sensíveis |
+
+#### Formulários por especialidade (migração 0037)
+
+- **Biblioteca do Tropi** (`packages/core/src/pep/specialties.ts`): 9 áreas (medicina, odontologia, psicologia, fisioterapia, terapia ocupacional, nutrição, fonoaudiologia, enfermagem e estética) e 36 especialidades, cada uma com **primeira consulta** e **retorno** (algumas com um terceiro: pré-natal, curativo).
+- **Qual formulário abre:** o escolhido na hora; senão o que a gestão definiu para o profissional; senão o da **especialidade do profissional** (reconhecida pelo nome no cadastro, com apelidos como "dermato", "dentista", "psicóloga"); senão o geral da área. É **retorno** quando o paciente já foi atendido na mesma especialidade. No rascunho, **"Trocar formulário"** muda o formulário e mantém as respostas dos campos iguais.
+- **Regras da área:** psicologia, terapia ocupacional, fonoaudiologia e estética não mostram sinais vitais; **receita só para medicina e odontologia** (a tela esconde e o servidor recusa). Revise com o responsável técnico de cada área (`AREA_RULES`).
+- A clínica recebe sozinha os formulários das especialidades dos profissionais ativos e das áreas marcadas; os outros, pela biblioteca ("Adicionar").
+- No cadastro do profissional, a especialidade tem uma lista com os nomes do catálogo.
+- **Por que o botão Atender não aparece:** o atendimento é sempre de quem atende (com o conselho dele). Se o login não estiver ligado a um profissional da agenda (Ajustes > Clínica > Profissionais > Acesso), o Consultório mostra um aviso com o caminho para resolver.
 | `/documento` | **Pública**: farmácia, escola ou empresa confere o documento pelo código impresso |
 
 **Regras garantidas pelo banco (migração 0030)**
@@ -1559,6 +1603,8 @@ São duas camadas:
 - `celular.spec.ts`: resposta dada direto no celular da clínica (webhook da Evolution com `fromMe`) entrando em Conversas como "Enviada pelo celular", sem duplicar, sem mexer nas 24h e ignorando números que não são contatos.
 - `avisos.spec.ts`: acesso de emergência avisando a gestão no sino (com prova de leitura e e-mail opcional) e triagem urgente avisando a profissional, com a faixa e o som do Consultório.
 - `consultorio.spec.ts`: início no Consultório, gestão sem conteúdo clínico, liberações parciais para a recepção, triagem, ficha parcial, próximo paciente, gestora com CRM.
+- `demo.spec.ts`: a demonstração preenche as telas (duração, LGPD, automações, leads, tarefas, regras do prontuário, prontuário e documento autêntico) e rodar o seed de novo não duplica.
+- `pacientes.spec.ts`: Pacientes x Leads (cadastro, lead que vira paciente ao marcar consulta, endereços antigos), formulários por especialidade em Ajustes > Prontuário (biblioteca, formulário por profissional), "Trocar formulário" e as regras da área (psicologia sem sinais vitais e sem receita).
 - `unidades.spec.ts`: travas do banco (sala ocupada, sala de outra unidade), cadastro de unidade e consultório, semana por período, agendamento herdando unidade e sala, agenda por unidade, equipe restrita a uma unidade.
 
 Regras de todos eles: **qualquer erro de JavaScript na página reprova o teste** (inclusive erro de hidratação do React) e as telas de celular (390 px) não podem rolar para o lado.

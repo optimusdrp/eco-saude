@@ -18,7 +18,7 @@ test("cada perfil cai na sua tela inicial e as principais telas abrem sem erro",
   const r = await as("recepcao");
   await r.goto("/");
   await expect(r).toHaveURL(/\/hoje$/);
-  for (const path of ["/crm/agenda", "/crm/contatos", "/crm/conversas"]) {
+  for (const path of ["/crm/agenda", "/pacientes", "/crm/conversas", "/crm/conversas/leads"]) {
     const res = await r.goto(path);
     expect(res?.status(), path).toBeLessThan(400);
     await expect(r.locator("main")).toBeVisible();

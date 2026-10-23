@@ -52,8 +52,8 @@ export default async function PrivacyRequestsPage() {
 
   return (
     <>
-      <Link href="/crm/contatos" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden /> Contatos
+      <Link href="/pacientes" className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-ink-soft hover:text-ink">
+        <ArrowLeft className="size-4" aria-hidden /> Pacientes
       </Link>
       <PageHeader
         title="Pedidos LGPD"

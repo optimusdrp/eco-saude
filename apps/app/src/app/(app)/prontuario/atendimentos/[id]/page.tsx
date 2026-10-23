@@ -9,12 +9,12 @@ import { DocumentButtons } from "@/components/pep/DocumentDialog";
 import { EncounterEditor } from "@/components/pep/EncounterEditor";
 import { EncounterContent } from "@/components/pep/EncounterView";
 import { PatientSummary } from "@/components/pep/PatientSummary";
-import { AddendumForm, DiscardDraftButton, RevokeDocumentButton } from "@/components/pep/widgets";
+import { AddendumForm, ChangeTemplateButton, DiscardDraftButton, RevokeDocumentButton } from "@/components/pep/widgets";
 import { Badge, Panel } from "@/components/ui/server";
 import { cn } from "@/components/ui/styles";
 import { requirePep } from "@/lib/auth/dal";
 import { accessFor, auditOpen, loadPepSettings } from "@/modules/pep/access";
-import { loadEncounter, loadPatient } from "@/modules/pep/records";
+import { activeTemplates, loadEncounter, loadPatient, rulesFor } from "@/modules/pep/records";
 
 export const metadata: Metadata = { title: "Atendimento" };
 
@@ -37,17 +37,21 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
     const patient = (await loadPatient(tx, e.contactId))!;
     const settings = await loadPepSettings(tx);
     const [triage] = e.appointmentId ? await tx.select().from(schema.pepTriages).where(eq(schema.pepTriages.appointmentId, e.appointmentId)) : [];
-    return { blocked: false as const, e, patient, settings, viaEmergency, triage: triage ?? null };
+    // Formulários para "Trocar formulário" (só no rascunho de quem atende)
+    const templates = e.status === "rascunho" && e.professional.userId === ctx.user.id ? (await activeTemplates(tx)).map((t) => ({ id: t.id, name: t.name, specialty: t.specialty })) : [];
+    return { blocked: false as const, e, patient, settings, viaEmergency, triage: triage ?? null, templates };
   });
   if (!data) notFound();
   if (data.blocked) redirect(`/prontuario/pacientes/${data.contactId}`);
-  const { e, patient, settings, viaEmergency, triage } = data;
+  const { e, patient, settings, viaEmergency, triage, templates } = data;
 
   const isAuthor = e.professional.userId === ctx.user.id;
   const canAttend = ctx.can("prontuario.atender");
   const editable = e.status === "rascunho" && isAuthor && canAttend;
   const canIssue = isAuthor && canAttend && !patient.anonymized;
   const allergies = patient.profile.allergies.map((a) => a.name);
+  // Área do profissional: decide sinais vitais e quais documentos aparecem
+  const rules = rulesFor(e.professional, settings.areas);
   const council = e.professional.council && e.professional.councilNumber ? `${e.professional.council}${e.professional.councilUf ? `-${e.professional.councilUf}` : ""} ${e.professional.councilNumber}` : null;
 
   return (
@@ -67,7 +71,10 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
 
       <header className="mt-5 mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-pep">{e.templateName ?? "Atendimento"}</p>
+          <p className="flex flex-wrap items-center gap-1 text-sm font-semibold text-pep">
+            {e.templateName ?? "Atendimento"}
+            {editable && templates.length > 1 ? <ChangeTemplateButton encounterId={e.id} current={e.templateId} templates={templates} /> : null}
+          </p>
           <h2 className="text-2xl font-bold">
             {e.startedAt.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: clinicTimeZone() })}, {e.professional.name}
           </h2>
@@ -99,6 +106,7 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
         <div className="min-w-0">
           {editable ? (
             <EncounterEditor
+              key={e.templateId ?? "sem-formulario"}
               id={e.id}
               version={e.version}
               fields={e.templateFields}
@@ -111,6 +119,8 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
               defaultReturnDays={settings.defaultReturnDays}
               age={patient.age}
               sex={patient.identity.sex}
+              showVitals={rules.vitals}
+              diagnosisLabel={rules.diagnosisLabel}
             />
           ) : (
             <div className="space-y-5">
@@ -167,7 +177,7 @@ export default async function EncounterPage({ params }: { params: Promise<{ id: 
             ) : null}
             {canIssue ? (
               council ? (
-                <DocumentButtons encounterId={e.id} diagnoses={e.diagnoses} allergies={allergies} startedAt={e.startedAt.toISOString()} />
+                <DocumentButtons encounterId={e.id} diagnoses={e.diagnoses} allergies={allergies} startedAt={e.startedAt.toISOString()} kinds={rules.documents} />
               ) : (
                 <p className="text-sm text-ink-soft">
                   Para emitir receita e atestado, cadastre o registro no conselho de {e.professional.name} em{" "}

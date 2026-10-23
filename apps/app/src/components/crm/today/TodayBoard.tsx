@@ -243,7 +243,7 @@ export function TodayBoard({ data }: { data: TodayData }) {
             detail={data.features.waitlist ? `${waitlistTotal} na lista de espera` : "horários a partir de agora"}
           />
           <Kpi
-            href="/crm/contatos"
+            href="/crm/conversas/leads?ordem=recentes"
             icon={<UserPlus className="size-4" aria-hidden />}
             label="Novos hoje"
             value={data.createdToday.contacts}

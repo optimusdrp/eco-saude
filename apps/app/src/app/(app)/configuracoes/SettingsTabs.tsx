@@ -25,6 +25,8 @@ import {
   UserRound,
   Users,
   Workflow,
+  ClipboardList,
+  Stethoscope,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,6 +50,8 @@ export const SETTINGS_ICONS: Record<SettingsIcon, typeof UserRound> = {
   ia: Sparkles,
   duracoes: Timer,
   unidades: DoorOpen,
+  prontuario: Stethoscope,
+  formularios: ClipboardList,
 };
 
 const plain = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -58,6 +62,8 @@ export function SettingsTabs({ groups }: { groups: SettingsGroup[] }) {
   const term = plain(q.trim());
   const match = (i: SettingsGroup["items"][number]) => !term || [i.label, i.hint, ...i.keywords].some((t) => plain(t).includes(term));
   const all = groups.flatMap((g) => g.items);
+  // Item ativo: o de endereço mais longo que combina (Prontuário x Prontuário > Formulários)
+  const activeHref = all.map((i) => i.href).filter((h) => path === h || path.startsWith(`${h}/`)).sort((a, b) => b.length - a.length)[0];
 
   return (
     <>
@@ -71,7 +77,7 @@ export function SettingsTabs({ groups }: { groups: SettingsGroup[] }) {
           </li>
           {all.map((i) => {
             const Icon = SETTINGS_ICONS[i.icon];
-            const active = path.startsWith(i.href);
+            const active = i.href === activeHref;
             return (
               <li key={i.href}>
                 <Link href={i.href} aria-current={active ? "page" : undefined} className={chip(active)}>
@@ -118,7 +124,7 @@ export function SettingsTabs({ groups }: { groups: SettingsGroup[] }) {
                 <ul className="space-y-0.5">
                   {items.map((i) => {
                     const Icon = SETTINGS_ICONS[i.icon];
-                    const active = path.startsWith(i.href);
+                    const active = i.href === activeHref;
                     return (
                       <li key={i.href}>
                         <Link

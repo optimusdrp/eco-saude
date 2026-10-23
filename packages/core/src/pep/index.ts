@@ -104,45 +104,7 @@ export function validateAnswers(fields: TemplateField[], answers: Answers, opts:
 }
 
 /* ------------------------------ Modelos prontos ------------------------------ */
-
-export interface BuiltInTemplate {
-  key: string;
-  specialty: string;
-  name: string;
-  fields: TemplateField[];
-}
-
-/** Modelos que toda clínica recebe (pode editar uma cópia). Fase 1: clínica médica geral. */
-export const BUILT_IN_TEMPLATES: BuiltInTemplate[] = [
-  {
-    key: "clinica_geral_primeira",
-    specialty: "Clínica médica geral",
-    name: "Primeira consulta",
-    fields: [
-      { id: "queixa", label: "Queixa principal", type: "texto", required: true },
-      { id: "hda", label: "História da doença atual", type: "texto_longo", required: true },
-      { id: "sec_antecedentes", label: "Antecedentes", type: "titulo" },
-      { id: "antecedentes_pessoais", label: "Antecedentes pessoais", type: "texto_longo", hint: "Doenças prévias, cirurgias, internações" },
-      { id: "antecedentes_familiares", label: "Antecedentes familiares", type: "texto_longo" },
-      { id: "habitos", label: "Hábitos", type: "multipla", options: ["Tabagismo", "Ex-tabagista", "Álcool", "Atividade física regular", "Sedentarismo"] },
-      { id: "revisao_sistemas", label: "Revisão de sistemas", type: "texto_longo" },
-      { id: "sec_exame", label: "Exame físico", type: "titulo" },
-      { id: "estado_geral", label: "Estado geral", type: "escolha", options: ["Bom", "Regular", "Ruim"] },
-      { id: "exame_fisico", label: "Exame físico", type: "texto_longo" },
-    ],
-  },
-  {
-    key: "clinica_geral_retorno",
-    specialty: "Clínica médica geral",
-    name: "Retorno / evolução",
-    fields: [
-      { id: "evolucao", label: "Evolução desde a última consulta", type: "texto_longo", required: true },
-      { id: "adesao", label: "Seguiu o tratamento?", type: "escolha", options: ["Sim", "Em parte", "Não"] },
-      { id: "exames_trazidos", label: "Exames trazidos", type: "texto_longo" },
-      { id: "exame_fisico", label: "Exame físico", type: "texto_longo" },
-    ],
-  },
-];
+/* Áreas, especialidades e a biblioteca de formulários ficam em ./specialties.ts */
 
 /* --------------------------------- Sinais vitais -------------------------------- */
 
@@ -334,3 +296,5 @@ export function ageYears(birthDate: string | null | undefined, at = new Date()):
 
 /* Avisos ativos (acesso de emergência, triagem urgente) */
 export * from "./notices";
+/* Áreas, especialidades, formulários prontos e a escolha do formulário do atendimento */
+export * from "./specialties";

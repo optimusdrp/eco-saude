@@ -16,10 +16,10 @@
  * personalização (visão, colunas, densidade) fica no navegador.
  */
 import { CHANNEL_LABEL, JOURNEY_STAGE_LABEL, JOURNEY_STAGES, type JourneyStage } from "@ecosaude/core/crm";
-import { Cake, CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, Download, LayoutGrid, MessagesSquare, Rows3, Search, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { AlertTriangle, Cake, CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, Download, FileHeart, LayoutGrid, MessagesSquare, Rows3, Search, Settings2, ShieldCheck, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useActionState, useEffect, useEffectEvent, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { NewContactButton } from "@/components/crm/patients/ContactForm";
 import { PatientLink } from "@/components/crm/widgets";
 import { Dialog, SubmitButton, TextareaField } from "@/components/ui";
@@ -32,10 +32,13 @@ import { assignOwnerAction, bulkMoveStageAction } from "@/modules/crm/actions/jo
 import { formatPhone } from "@/modules/crm/format";
 import { COLUMNS, DEFAULT_CONTACTS_PREFS, type ColumnId, type ContactRow, type ContactsData } from "./types";
 
-export function ContactsExplorer({ data }: { data: ContactsData }) {
+export function ContactsExplorer({ data, actions }: { data: ContactsData; /** Botões extras no topo (ex.: cadastro pelo Prontuário) */ actions?: ReactNode }) {
   const router = useRouter();
   const [prefs, update, reset] = useStoredPrefs("eco:contatos:prefs:v1", DEFAULT_CONTACTS_PREFS);
   const p = data.params;
+  // Lista com escopo (Pacientes ou Leads) ou a lista antiga, que mistura os dois
+  const base = data.scope?.path ?? "/crm/contatos";
+  const crm = data.crm !== false;
   const searchRef = useRef<HTMLInputElement>(null);
 
   /** URL com os filtros atuais + mudanças (mudar filtro volta para a página 1) */
@@ -44,7 +47,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
     if (!keepPage && !("pagina" in patch)) delete next.pagina;
     const sp = new URLSearchParams(Object.entries(next).filter((e): e is [string, string] => !!e[1]));
     const s = sp.toString();
-    return `/crm/contatos${s ? `?${s}` : ""}`;
+    return `${base}${s ? `?${s}` : ""}`;
   };
   const go = (patch: Record<string, string | undefined>) => router.push(href(patch), { scroll: false });
 
@@ -125,7 +128,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
 
   /* ------------------------------ Filtros ativos ------------------------------ */
   const pills: { key: string; label: string }[] = [];
-  if (p.tipo) pills.push({ key: "tipo", label: p.tipo === "lead" ? "Interessados" : "Pacientes" });
+  if (p.tipo && !data.scope) pills.push({ key: "tipo", label: p.tipo === "lead" ? "Interessados" : "Pacientes" });
   if (p.etapa) pills.push({ key: "etapa", label: JOURNEY_STAGE_LABEL[p.etapa as JourneyStage] ?? p.etapa });
   if (p.segmento) pills.push({ key: "segmento", label: data.segments[p.segmento]?.label ?? p.segmento });
   if (p.canal) pills.push({ key: "canal", label: CHANNEL_LABEL[p.canal as keyof typeof CHANNEL_LABEL] ?? p.canal });
@@ -135,14 +138,15 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
   if (p.q) pills.push({ key: "q", label: `“${p.q}”` });
 
   const st = data.stats;
-  const exportHref = `/api/contatos/exportar${href({}).replace("/crm/contatos", "")}`;
+  // Exportação: os mesmos filtros (e o tipo da lista, quando há escopo)
+  const exportHref = `/api/contatos/exportar${href(data.scope ? { tipo: data.scope.kind } : {}).replace(base, "")}`;
   const select = "min-h-9 max-w-48 rounded-lg bg-paper px-2 text-sm ring-1 ring-line";
 
   return (
     <>
       <PageHeader
-        title="Contatos"
-        description="Interessados e pacientes num lugar só. Clique no nome para ver o resumo sem sair da lista."
+        title={data.scope?.title ?? "Contatos"}
+        description={data.scope?.description ?? "Interessados e pacientes num lugar só. Clique no nome para ver o resumo sem sair da lista."}
         actions={
           <>
             {data.canEdit ? (
@@ -161,7 +165,8 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
                 <Download className="size-4" aria-hidden /> Exportar
               </a>
             ) : null}
-            {data.canEdit ? <NewContactButton /> : null}
+            {actions}
+            {data.canEdit ? <NewContactButton label={data.newLabel} asPatient={data.scope?.kind === "paciente"} /> : null}
           </>
         }
       />
@@ -171,9 +176,23 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
         <div className="min-w-0">
           <p className="flex flex-wrap items-baseline gap-x-2">
             <span className="font-display text-3xl font-bold tabular">{st.total}</span>
-            <span className="text-ink-soft">{st.total === 1 ? "contato" : "contatos"} na base</span>
+            <span className="text-ink-soft">{data.scope ? (data.scope.kind === "paciente" ? (st.total === 1 ? "paciente" : "pacientes") : st.total === 1 ? "lead" : "leads") : st.total === 1 ? "contato" : "contatos"} na base</span>
           </p>
-          {/* Leads x pacientes: a barra é o filtro */}
+          {/* Lista com escopo: atalho para a outra lista; sem escopo, a barra leads x pacientes é o filtro */}
+          {data.scope ? (
+            <p className="mt-2 text-sm text-ink-soft">
+              {data.scope.kind === "paciente" ? "Pacientes da clínica: cadastrados como paciente, com consulta marcada ou já atendidos." : "Leads: quem conversou com a clínica e ainda não marcou consulta."}
+              {data.scope.other ? (
+                <>
+                  {" "}
+                  <Link href={data.scope.other.href} className="font-semibold text-crm hover:underline">
+                    {data.scope.other.label} ({data.scope.other.count})
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          ) : (
+          <>
           <div className="mt-3 flex h-9 overflow-hidden rounded-xl ring-1 ring-line" role="group" aria-label="Filtrar por tipo">
             <Link
               href={href({ tipo: p.tipo === "lead" ? undefined : "lead" })}
@@ -198,7 +217,9 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
               Pacientes <span className="tabular">{st.pacientes}</span>
             </Link>
           </div>
-          <p className="mt-1.5 text-xs text-ink-soft">Paciente é quem já foi atendido ao menos uma vez; interessado é quem ainda não foi (o pedido de orçamento, a primeira mensagem).</p>
+          <p className="mt-1.5 text-xs text-ink-soft">Paciente é quem está cadastrado como paciente, tem consulta marcada ou já foi atendido; interessado é quem ainda não marcou.</p>
+          </>
+          )}
         </div>
         <dl className="grid grid-cols-3 gap-2">
           <Stat href={href({ segmento: p.segmento === "novos" ? undefined : "novos" })} active={p.segmento === "novos"} label="Novos em 30 dias" value={String(st.novos30)} />
@@ -370,7 +391,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
           </Link>
         ))}
         {pills.length > 1 ? (
-          <Link href="/crm/contatos" className="text-xs font-semibold text-crm hover:underline">
+          <Link href={base} className="text-xs font-semibold text-crm hover:underline">
             Limpar tudo
           </Link>
         ) : null}
@@ -466,7 +487,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
           <p className="font-display text-lg font-bold">Ninguém encontrado</p>
           <p className="mx-auto mt-1 max-w-md text-ink-soft">{p.q ? "Confira a grafia ou busque pelo celular." : "Nenhum contato neste filtro."}</p>
           {pills.length ? (
-            <Link href="/crm/contatos" className="mt-2 inline-flex min-h-10 items-center font-semibold text-crm hover:underline">
+            <Link href={base} className="mt-2 inline-flex min-h-10 items-center font-semibold text-crm hover:underline">
               Limpar filtros
             </Link>
           ) : null}
@@ -513,7 +534,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
                       <div className="flex items-center gap-3">
                         {prefs.density === "compacta" ? null : <Avatar name={r.name} size="sm" />}
                         <div className="min-w-0">
-                          <PatientLink id={r.id} name={r.name} />
+                          <NameLink r={r} crm={crm} />
                           <p className="flex flex-wrap items-center gap-1 text-xs text-ink-soft">
                             <KindBadge kind={r.kind} />
                             {r.age !== null ? <span>{r.age} anos</span> : null}
@@ -528,7 +549,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
                       </td>
                     ))}
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <RowActions r={r} canSchedule={data.canSchedule} />
+                      <RowActions r={r} canSchedule={data.canSchedule} crm={crm} pep={!!data.pep?.canOpen} />
                     </td>
                   </tr>
                 ))}
@@ -538,7 +559,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
           {/* Celular: cartões compactos */}
           <ul className="space-y-2 md:hidden">
             {data.rows.map((r) => (
-              <MobileCard key={r.id} r={r} selected={selected.has(r.id)} onToggle={canBulk ? toggle : null} canSchedule={data.canSchedule} />
+              <MobileCard key={r.id} r={r} selected={selected.has(r.id)} onToggle={canBulk ? toggle : null} canSchedule={data.canSchedule} crm={crm} pep={!!data.pep?.canOpen} />
             ))}
           </ul>
         </>
@@ -549,7 +570,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
               <div className="flex items-start gap-3">
                 <Avatar name={r.name} />
                 <div className="min-w-0 flex-1">
-                  <PatientLink id={r.id} name={r.name} className="block truncate" />
+                  <NameLink r={r} crm={crm} className="block truncate" />
                   <p className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-ink-soft">
                     <KindBadge kind={r.kind} />
                     <StageBadge stage={r.stage} />
@@ -580,7 +601,7 @@ export function ContactsExplorer({ data }: { data: ContactsData }) {
               </p>
               <div className="mt-auto flex items-center justify-between gap-2 border-t border-line pt-2">
                 <span className="text-xs text-ink-soft">{r.ownerName ? `com ${r.ownerName}` : "sem responsável"}</span>
-                <RowActions r={r} canSchedule={data.canSchedule} />
+                <RowActions r={r} canSchedule={data.canSchedule} crm={crm} pep={!!data.pep?.canOpen} />
               </div>
             </li>
           ))}
@@ -800,20 +821,44 @@ function Cell({ col, r }: { col: ColumnId; r: ContactRow }) {
   }
 }
 
-/** Ações rápidas: conversar, agendar, copiar celular, abrir ficha */
-function RowActions({ r, canSchedule, compact = false }: { r: ContactRow; canSchedule: boolean; compact?: boolean }) {
+/** Nome: abre o painel do contato (Atendimento) ou, sem ele, o prontuário */
+function NameLink({ r, crm, className }: { r: ContactRow; crm: boolean; className?: string }) {
+  const name = (
+    <>
+      {r.name}
+      {r.allergy ? (
+        <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-alert-tint px-1.5 align-middle text-[0.7rem] font-bold text-alert" title="Tem alergia registrada no prontuário">
+          <AlertTriangle className="size-3" aria-hidden />
+          Alergia
+        </span>
+      ) : null}
+    </>
+  );
+  return crm ? (
+    <PatientLink id={r.id} name={r.name} className={className}>
+      {name}
+    </PatientLink>
+  ) : (
+    <Link href={`/prontuario/pacientes/${r.id}`} className={cn("min-w-0 font-semibold hover:underline", className)}>
+      {name}
+    </Link>
+  );
+}
+
+/** Ações rápidas: conversar, agendar, copiar celular, prontuário, abrir ficha */
+function RowActions({ r, canSchedule, compact = false, crm = true, pep = false }: { r: ContactRow; canSchedule: boolean; compact?: boolean; crm?: boolean; pep?: boolean }) {
   const [copied, setCopied] = useState(false);
   const btn = "inline-flex size-9 items-center justify-center rounded-lg text-ink-soft hover:bg-fog hover:text-crm";
   return (
     <span className="inline-flex items-center gap-0.5">
-      {r.conversationId ? (
+      {crm && r.conversationId ? (
         <Link href={`/crm/conversas/${r.conversationId}`} className={btn} aria-label={`Abrir conversa com ${r.name}`} title="Abrir conversa">
           <MessagesSquare className="size-4" aria-hidden />
         </Link>
       ) : compact ? null : (
         <span className="size-9" aria-hidden />
       )}
-      {canSchedule ? (
+      {crm && canSchedule ? (
         <button type="button" onClick={() => emit("eco:open-schedule", { contactId: r.id, contactName: r.name })} className={btn} aria-label={`Agendar para ${r.name}`} title="Agendar">
           <CalendarPlus className="size-4" aria-hidden />
         </button>
@@ -838,7 +883,12 @@ function RowActions({ r, canSchedule, compact = false }: { r: ContactRow; canSch
       ) : compact ? null : (
         <span className="size-9" aria-hidden />
       )}
-      {compact ? null : (
+      {pep && r.kind === "paciente" ? (
+        <Link href={`/prontuario/pacientes/${r.id}`} className={btn} aria-label={`Prontuário de ${r.name}`} title="Prontuário">
+          <FileHeart className="size-4 text-pep" aria-hidden />
+        </Link>
+      ) : null}
+      {compact || !crm ? null : (
         <Link href={`/crm/contatos/${r.id}`} className="ml-1 inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-semibold text-crm hover:bg-crm-tint">
           Abrir ficha
         </Link>
@@ -847,13 +897,13 @@ function RowActions({ r, canSchedule, compact = false }: { r: ContactRow; canSch
   );
 }
 
-function MobileCard({ r, selected, onToggle, canSchedule }: { r: ContactRow; selected: boolean; onToggle: ((id: string) => void) | null; canSchedule: boolean }) {
+function MobileCard({ r, selected, onToggle, canSchedule, crm = true, pep = false }: { r: ContactRow; selected: boolean; onToggle: ((id: string) => void) | null; canSchedule: boolean; crm?: boolean; pep?: boolean }) {
   return (
     <li className={cn("rounded-2xl bg-paper p-3 ring-1 ring-line", selected && "ring-2 ring-crm")}>
       <div className="flex items-center gap-3">
         {onToggle ? <input type="checkbox" checked={selected} onChange={() => onToggle(r.id)} className="size-4 shrink-0 accent-[var(--color-crm)]" aria-label={`Selecionar ${r.name}`} /> : null}
         <Avatar name={r.name} />
-        <Link href={`/crm/contatos/${r.id}`} className="min-w-0 flex-1">
+        <Link href={crm ? `/crm/contatos/${r.id}` : `/prontuario/pacientes/${r.id}`} className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
             <span className="truncate font-semibold">{r.name}</span>
             <KindBadge kind={r.kind} />
@@ -869,7 +919,7 @@ function MobileCard({ r, selected, onToggle, canSchedule }: { r: ContactRow; sel
           <StageBadge stage={r.stage} />
           <Flags r={r} />
         </span>
-        <RowActions r={r} canSchedule={canSchedule} compact />
+        <RowActions r={r} canSchedule={canSchedule} crm={crm} pep={pep} compact />
       </div>
     </li>
   );

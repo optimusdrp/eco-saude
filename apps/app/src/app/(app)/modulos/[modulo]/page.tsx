@@ -45,7 +45,7 @@ export default async function ModulePage({ params }: { params: Promise<{ modulo:
   const enabled = ent.modules.includes(id);
   // Módulos já prontos têm tela própria
   if (enabled && id === "crm") redirect("/hoje");
-  if (enabled && id === "pep") redirect("/prontuario");
+  if (enabled && id === "pep") redirect("/consultorio");
   const pitch = PITCH[id];
 
   return (

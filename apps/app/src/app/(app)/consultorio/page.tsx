@@ -1,7 +1,7 @@
 import { addDaysIso, arrivalAction, arrivalWindow, clinicTimeZone, dayRangeUtc, formatTime, todayIso } from "@ecosaude/core/crm";
 import { ageYears } from "@ecosaude/core/pep";
 import { asc, eq, schema, withTenant } from "@ecosaude/db";
-import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, DoorOpen, FilePen, MapPin, Search, Stethoscope } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, DoorOpen, FilePen, Link2Off, MapPin, Stethoscope, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrivalButton, AutoRefresh, TriageButton, UrgentWatch } from "@/components/pep/ConsultorioTools";
@@ -93,6 +93,28 @@ export default async function ConsultorioPage({ searchParams }: { searchParams: 
             .filter((r) => r.triage?.priority === "urgente" && (r.status === "chegou" || r.status === "triado" || r.status === "aguardando"))
             .map((r) => ({ appointmentId: r.appointmentId, name: r.contact.name, time: formatTime(r.startsAt), professional: showPro ? r.professional.name : null }))}
         />
+      ) : null}
+
+      {/* Por que o botão "Atender" não aparece: login sem profissional ligado, ou perfil sem a permissão */}
+      {!mine && (ctx.user.healthProfessional || can.attend) ? (
+        <p role="status" data-testid="aviso-vinculo" className="mb-4 flex items-start gap-2 rounded-xl bg-erp-tint px-3 py-2.5 text-sm text-erp-ink">
+          <Link2Off className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            <strong>Seu acesso não está ligado a um profissional da agenda.</strong> Por isso o botão Atender não aparece: o atendimento é sempre de quem atende, com o registro no conselho dele.{" "}
+            {ctx.can("config.clinica") ? (
+              <Link href="/configuracoes/clinica" className="font-semibold underline underline-offset-2">
+                Ligar em Ajustes &gt; Clínica &gt; Profissionais
+              </Link>
+            ) : (
+              "Peça à gestão: Ajustes > Clínica > Profissionais > Acesso."
+            )}
+          </span>
+        </p>
+      ) : mine && !can.attend ? (
+        <p role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-erp-tint px-3 py-2.5 text-sm text-erp-ink">
+          <Link2Off className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>Seu perfil de acesso não tem a permissão de atender. Peça à gestão: Ajustes &gt; Perfis &gt; Prontuário &gt; Atender.</span>
+        </p>
       ) : null}
 
       {/* --------------------------- Dia e profissional --------------------------- */}
@@ -219,19 +241,19 @@ export default async function ConsultorioPage({ searchParams }: { searchParams: 
           ) : null}
           <Panel title="Atalhos">
             <ul className="space-y-1">
-              {can.read || can.summary || can.docs ? (
+              {can.read || can.summary || can.docs || ctx.can("pacientes.ver") ? (
                 <li>
-                  <Link href="/prontuario" className="flex min-h-11 items-center gap-2 rounded-xl px-2 font-semibold hover:bg-fog">
-                    <Search className="size-4 text-pep" aria-hidden />
-                    Buscar paciente
+                  <Link href="/pacientes" className="flex min-h-11 items-center gap-2 rounded-xl px-2 font-semibold hover:bg-fog">
+                    <Users className="size-4 text-pep" aria-hidden />
+                    Pacientes
                   </Link>
                 </li>
               ) : null}
               {ctx.can("prontuario.modelos") ? (
                 <li>
-                  <Link href="/prontuario/modelos" className="flex min-h-11 items-center gap-2 rounded-xl px-2 font-semibold hover:bg-fog">
+                  <Link href="/configuracoes/prontuario/modelos" className="flex min-h-11 items-center gap-2 rounded-xl px-2 font-semibold hover:bg-fog">
                     <ClipboardList className="size-4 text-pep" aria-hidden />
-                    Modelos e ajustes
+                    Formulários (Ajustes)
                   </Link>
                 </li>
               ) : null}

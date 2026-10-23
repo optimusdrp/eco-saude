@@ -8,8 +8,10 @@ import { containsText } from "./search";
  * /crm/contatos e pela exportação em CSV, para as duas mostrarem exatamente
  * as mesmas pessoas.
  *
- * Lead x paciente: PACIENTE é quem já compareceu a ao menos uma consulta;
- * LEAD é todo o resto (ainda não foi atendido).
+ * Lead x paciente (página Pacientes x aba Leads de Conversas):
+ *   PACIENTE (efetivo) = está na etapa Paciente ou Reativar, OU tem consulta marcada que não foi
+ *   cancelada (passada ou futura), OU já tem atendimento no prontuário.
+ *   LEAD = todo o resto (conversou, pediu orçamento, mas ainda não marcou).
  */
 
 export const SEGMENTS = {
@@ -79,7 +81,11 @@ export const contactExtras = {
   visits: sql<number>`(select count(*)::int from appointments a where a.contact_id = "contacts"."id" and a.status = 'compareceu')`,
   conversationId: sql<string | null>`(select cv.id from conversations cv where cv.contact_id = "contacts"."id" order by cv.last_message_at desc nulls last limit 1)`,
 };
-const isPatient = sql`exists (select 1 from appointments a where a.contact_id = "contacts"."id" and a.status = 'compareceu')`;
+export const isPatient = sql`(
+  "contacts"."stage" in ('paciente', 'reativar')
+  or exists (select 1 from appointments a where a.contact_id = "contacts"."id" and a.status <> 'cancelado')
+  or exists (select 1 from pep_encounters e where e.contact_id = "contacts"."id")
+)`;
 
 /** Condição SQL dos filtros (sem paginação) */
 export function contactWhere(f: ContactFilters): SQL | undefined {
@@ -142,6 +148,8 @@ export function contactOrder(f: ContactFilters): SQL[] {
 
 /** Campos de cada linha */
 export const contactColumns = {
+  /** Paciente efetivo (regra no topo do arquivo) */
+  patient: sql<boolean>`${isPatient}`,
   id: c.id,
   name: c.name,
   phone: c.phone,

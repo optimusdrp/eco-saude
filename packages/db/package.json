@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema.ts",
-    "./schema-pep": "./src/schema-pep.ts"
+    "./schema-pep": "./src/schema-pep.ts",
+    "./seed-demo": "./src/seed-demo-extra.ts"
   },
   "scripts": {
     "generate": "drizzle-kit generate",

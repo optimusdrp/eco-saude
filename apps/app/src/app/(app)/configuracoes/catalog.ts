@@ -5,7 +5,7 @@ import type { ClinicPermission } from "@ecosaude/core/crm";
  * Uma lista só, usada pelo menu lateral, pelo painel inicial e pela busca.
  * Cada item diz quem pode ver (permissão) e as palavras que a busca encontra.
  */
-export type SettingsIcon = "conta" | "preferencias" | "clinica" | "automacoes" | "canais" | "respostas" | "retornos" | "equipe" | "perfis" | "seguranca" | "plano" | "mensagens" | "ia" | "duracoes" | "unidades";
+export type SettingsIcon = "conta" | "preferencias" | "clinica" | "automacoes" | "canais" | "respostas" | "retornos" | "equipe" | "perfis" | "seguranca" | "plano" | "mensagens" | "ia" | "duracoes" | "unidades" | "prontuario" | "formularios";
 
 export interface SettingsItem {
   href: string;
@@ -14,6 +14,8 @@ export interface SettingsItem {
   icon: SettingsIcon;
   /** null = todos podem ver */
   permission: ClinicPermission | null;
+  /** Só aparece com este módulo contratado (ex.: "pep" para os ajustes do prontuário) */
+  module?: string;
   /** O que a busca deve achar aqui (além do nome) */
   keywords: string[];
 }
@@ -164,6 +166,30 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     ],
   },
   {
+    // Prontuário: quem configura é a GESTÃO (não o profissional de saúde no dia a dia)
+    label: "Prontuário",
+    items: [
+      {
+        href: "/configuracoes/prontuario/modelos",
+        label: "Formulários de atendimento",
+        hint: "Formulários por especialidade e qual cada profissional usa",
+        icon: "formularios",
+        permission: "prontuario.modelos",
+        module: "pep",
+        keywords: ["modelo", "formulário", "anamnese", "evolução", "especialidade", "primeira consulta", "retorno", "campos", "odontologia", "psicologia", "fisioterapia", "nutrição"],
+      },
+      {
+        href: "/configuracoes/prontuario",
+        label: "Regras e acessos do prontuário",
+        hint: "Áreas da clínica, sigilo, cabeçalho dos documentos e acessos sensíveis",
+        icon: "prontuario",
+        permission: "prontuario.modelos",
+        module: "pep",
+        keywords: ["sigilo", "emergência", "acesso", "auditoria", "cabeçalho", "documento", "retorno", "área", "especialidades", "lgpd"],
+      },
+    ],
+  },
+  {
     label: "Gestão",
     items: [
       {
@@ -202,7 +228,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
   },
 ];
 
-/** Grupos só com os itens que o perfil pode ver */
-export function visibleGroups(can: (p: ClinicPermission) => boolean): SettingsGroup[] {
-  return SETTINGS_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !i.permission || can(i.permission)) })).filter((g) => g.items.length);
+/** Grupos só com os itens que o perfil pode ver (e dos módulos contratados) */
+export function visibleGroups(can: (p: ClinicPermission) => boolean, modules?: readonly string[]): SettingsGroup[] {
+  return SETTINGS_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => (!i.permission || can(i.permission)) && (!i.module || !modules || modules.includes(i.module))) })).filter((g) => g.items.length);
 }

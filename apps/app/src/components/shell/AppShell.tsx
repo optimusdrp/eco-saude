@@ -147,12 +147,12 @@ export function AppShell({
     togglePin: () => setPinned((p) => !p),
   };
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href.startsWith("/prontuario") && pathname.startsWith("/prontuario"));
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`) || (href === "/pacientes" && (pathname.startsWith("/prontuario") || pathname.startsWith("/crm/contatos")));
   const main = nav.filter((n) => n.icon !== "config");
   const current = activeModule(pathname);
   const homeHref = nav[0]?.href ?? "/configuracoes";
-  // Prontuário: a primeira tela dele que a pessoa pode abrir (Consultório ou Prontuário)
-  const pepHome = nav.find((n) => n.icon === "consultorio" || n.icon === "prontuario")?.href;
+  // Prontuário: a primeira tela dele que a pessoa pode abrir (Consultório ou Pacientes)
+  const pepHome = nav.find((n) => n.icon === "consultorio")?.href ?? nav.find((n) => n.href === "/pacientes")?.href;
   const moduleHref = (m: ModuleItem) => (!m.enabled ? `/modulos/${m.id}` : m.id === "pep" ? (pepHome ?? `/modulos/${m.id}`) : (moduleHome[m.id] ?? `/modulos/${m.id}`));
   const config = nav.find((n) => n.icon === "config");
 

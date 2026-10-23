@@ -31,6 +31,9 @@ export interface EditorProps {
   defaultReturnDays: number | null;
   age: number | null;
   sex: "F" | "M" | null;
+  /** Regras da área do profissional (psicologia, por exemplo, não usa sinais vitais) */
+  showVitals?: boolean;
+  diagnosisLabel?: string;
 }
 
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved"; at: Date } | { kind: "error"; message: string };
@@ -167,6 +170,7 @@ export function EncounterEditor(props: EditorProps) {
       </section>
 
       {/* ------------------------------ Sinais vitais ------------------------------ */}
+      {props.showVitals !== false ? (
       <section aria-labelledby="sec-vitais" className="rounded-2xl bg-paper p-4 ring-1 ring-line sm:p-5">
         <h2 id="sec-vitais" className="text-lg font-bold">
           Sinais vitais
@@ -208,11 +212,12 @@ export function EncounterEditor(props: EditorProps) {
         ) : null}
         {props.age !== null && props.age < 18 ? <p className="mt-2 text-xs text-ink-soft">Paciente menor de 18 anos: alertas automáticos desligados (faixas variam com a idade).</p> : null}
       </section>
+      ) : null}
 
       {/* ------------------------------- Diagnóstico ------------------------------- */}
       <section aria-labelledby="sec-cid" className="rounded-2xl bg-paper p-4 ring-1 ring-line sm:p-5">
         <h2 id="sec-cid" className="text-lg font-bold">
-          Hipóteses diagnósticas (CID-10)
+          {props.diagnosisLabel ?? "Hipóteses diagnósticas (CID-10)"}
         </h2>
         <div className="mt-3">
           <CidPicker value={diagnoses} onChange={setDiagnoses} sex={props.sex} />
