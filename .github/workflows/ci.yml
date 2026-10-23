@@ -96,6 +96,12 @@ jobs:
         run: pnpm turbo run build --filter=@ecosaude/app
       - name: Testes de ponta a ponta
         run: pnpm test:e2e
+      - name: Compilar o site
+        if: ${{ !cancelled() }}
+        run: pnpm turbo run build --filter=@ecosaude/site
+      - name: Testes da landing page
+        if: ${{ !cancelled() }}
+        run: pnpm test:e2e:site
 
       - name: Relatório do Playwright
         if: ${{ !cancelled() }}

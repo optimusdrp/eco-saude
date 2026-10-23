@@ -253,6 +253,13 @@
       "when": 1792759351629,
       "tag": "0035_ritmo_whatsapp",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792774170558,
+      "tag": "0036_modulo_laboratorio",
+      "breakpoints": true
     }
   ]
 }

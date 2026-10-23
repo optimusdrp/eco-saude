@@ -3,6 +3,7 @@ import { Ecosystem } from "@/components/sections/Ecosystem";
 import { Faq } from "@/components/sections/Faq";
 import { Features } from "@/components/sections/Features";
 import { Hero } from "@/components/sections/Hero";
+import { Lab } from "@/components/sections/Lab";
 import { Offline } from "@/components/sections/Offline";
 import { Roadmap } from "@/components/sections/Roadmap";
 import { Security } from "@/components/sections/Security";
@@ -17,6 +18,7 @@ export default function HomePage() {
       <Hero />
       <Ecosystem />
       <Features />
+      <Lab />
       <Offline />
       <Security />
       <Roadmap />

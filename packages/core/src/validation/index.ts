@@ -33,7 +33,7 @@ const optionalText = (max: number) =>
 export const contactSchema = z.object({
   name: text(2, 120, "Informe seu nome."),
   email: z.email("Informe um e-mail válido.").max(160),
-  clinic: text(2, 160, "Informe o nome da clínica."),
+  clinic: text(2, 160, "Informe o nome da clínica ou do laboratório."),
   size: z.enum(CLINIC_SIZES, { error: "Escolha o número de profissionais." }),
   interests: z.array(z.enum(MODULE_IDS)).min(1, "Escolha pelo menos um módulo."),
   /** Consentimento LGPD: obrigatório para guardar o contato. */
@@ -109,7 +109,7 @@ export const cnpjSchema = z
   .transform((v) => v || undefined);
 
 export const clinicSchema = z.object({
-  tradeName: text(2, 160, "Informe o nome da clínica."),
+  tradeName: text(2, 160, "Informe o nome da clínica ou do laboratório."),
   legalName: optionalText(200),
   cnpj: cnpjSchema,
   email: z.union([z.email("E-mail inválido."), z.literal("")]).transform((v) => v || undefined),

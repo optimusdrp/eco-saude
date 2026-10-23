@@ -23,7 +23,8 @@
     "db:generate": "pnpm --filter @ecosaude/db generate",
     "db:migrate": "pnpm --filter @ecosaude/db migrate",
     "db:seed": "pnpm --filter @ecosaude/db seed",
-    "db:studio": "pnpm --filter @ecosaude/db studio"
+    "db:studio": "pnpm --filter @ecosaude/db studio",
+    "test:e2e:site": "pnpm --filter @ecosaude/site test:e2e"
   },
   "devDependencies": {
     "turbo": "2.11.7"

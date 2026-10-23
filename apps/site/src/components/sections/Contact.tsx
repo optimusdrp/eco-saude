@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { moduleColor } from "@/components/ui/ModuleTag";
@@ -32,6 +32,18 @@ export function Contact() {
   const [status, setStatus] = useState<Status>("idle");
   const [errorText, setErrorText] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Botões de outras seções (ex.: "Quero ser avisado" do Laboratório) marcam o módulo aqui
+  useEffect(() => {
+    function onInterest(e: Event) {
+      const id = (e as CustomEvent<string>).detail;
+      const box = formRef.current?.querySelector<HTMLInputElement>(`input[name="interests"][value="${id}"]`);
+      if (box) box.checked = true;
+    }
+    window.addEventListener("ecosaude:interesse", onInterest);
+    return () => window.removeEventListener("ecosaude:interesse", onInterest);
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,8 +110,9 @@ export function Contact() {
     <section id="demonstracao" aria-labelledby="demo-title" className="py-20 lg:py-28">
       <Container className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
         <SectionHeading id="demo-title" title="Veja com os dados da sua rotina">
-          Conte um pouco sobre a clínica e mostramos, em 30 minutos, como o Tropi Atendimento funciona
-          na sua realidade. Sem compromisso.
+          Conte um pouco sobre a clínica ou o laboratório. Mostramos em 30 minutos o que já funciona
+          (Atendimento e Prontuário) na sua realidade e avisamos quando os módulos planejados forem
+          liberados. Sem compromisso.
         </SectionHeading>
 
         <div className="rounded-3xl bg-paper p-5 ring-1 ring-line sm:p-8">
@@ -112,7 +125,7 @@ export function Contact() {
               </p>
             </div>
           ) : (
-            <form noValidate onSubmit={onSubmit} className="grid gap-5 sm:grid-cols-2">
+            <form ref={formRef} noValidate onSubmit={onSubmit} className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="name" className="font-semibold">Seu nome</label>
                 <input id="name" name="name" autoComplete="name" className={inputClass}
@@ -128,14 +141,14 @@ export function Contact() {
               </div>
 
               <div>
-                <label htmlFor="clinic" className="font-semibold">Clínica</label>
+                <label htmlFor="clinic" className="font-semibold">Clínica ou laboratório</label>
                 <input id="clinic" name="clinic" autoComplete="organization" className={inputClass}
                   aria-invalid={!!errors.clinic} aria-describedby={errors.clinic ? "clinic-erro" : undefined} />
                 {fieldError("clinic")}
               </div>
 
               <div>
-                <label htmlFor="size" className="font-semibold">Profissionais na clínica</label>
+                <label htmlFor="size" className="font-semibold">Profissionais na equipe</label>
                 <select id="size" name="size" defaultValue="" className={inputClass}
                   aria-invalid={!!errors.size} aria-describedby={errors.size ? "size-erro" : undefined}>
                   <option value="" disabled>Escolha</option>
@@ -148,10 +161,10 @@ export function Contact() {
 
               <fieldset className="sm:col-span-2" aria-describedby={errors.interests ? "interests-erro" : undefined}>
                 <legend className="font-semibold">Módulos de interesse</legend>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {modules.map((m) => (
                     <label key={m.id}
-                      className="flex min-h-12 cursor-pointer items-center gap-2.5 rounded-xl px-3 ring-1 ring-line has-[:checked]:ring-2 has-[:checked]:ring-crm">
+                      className="flex min-h-12 min-w-0 cursor-pointer items-center gap-2.5 rounded-xl px-3 ring-1 ring-line has-[:checked]:ring-2 has-[:checked]:ring-crm">
                       <input type="checkbox" name="interests" value={m.id} defaultChecked={m.id === "crm"} className="size-4 accent-[var(--color-crm)]" />
                       <span className={cn("size-2 rounded-full", moduleColor[m.id].dot)} aria-hidden />
                       {m.name}

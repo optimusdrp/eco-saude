@@ -1,11 +1,12 @@
 # Tropi: monorepo
 
 Site público, backoffice interno e ambiente da clínica do ecossistema **Tropi**
-(*Do primeiro contato ao retorno.*): Tropi Atendimento e Tropi Prontuário (fase 1) hoje;
-Tropi Gestão e Tropi Indicadores nas próximas etapas.
+(*Do primeiro contato ao retorno.*), para clínicas e laboratórios: Tropi Atendimento e
+Tropi Prontuário (fase 1) hoje; Tropi Gestão, Tropi Indicadores e Tropi Laboratório nas
+próximas etapas (o Laboratório já existe no catálogo, com código pausado).
 
 > O projeto se chamava EcoSaúde. Os nomes **internos** continuam iguais de propósito
-> (pacotes `@ecosaude/*`, papel `ecosaude_tenant` do banco, rotas `/crm`, ids `crm/erp/pep/bi`):
+> (pacotes `@ecosaude/*`, papel `ecosaude_tenant` do banco, rotas `/crm`, ids `crm/erp/pep/bi/lab`):
 > o usuário não vê nenhum deles, e trocá-los exigiria migração do banco e mudança de
 > configuração na Vercel sem ganho para a marca. Veja "Identidade Tropi" abaixo.
 
@@ -1203,6 +1204,23 @@ IDs gerados no aparelho (`client_id`) tornam reenvios seguros (não duplicam), e
 cadastros e consultas detecta edição simultânea ("alterado por outra pessoa"). A fila de envio
 já separa gravar de enviar.
 
+## 5a. Landing page e o módulo Laboratório
+
+O site (`apps/site`) vende o **ecossistema inteiro, para clínicas e laboratórios**, sem prometer o que ainda não existe:
+
+| Módulo | No site | No sistema |
+|---|---|---|
+| Atendimento e Prontuário | "Em teste" | Funcionando |
+| Gestão e Indicadores | "Planejado" | Ainda não existem |
+| **Laboratório** (análises clínicas, imagem e prótese) | "Planejado", com seção própria (`#laboratorio`) | Só no catálogo: aparece na lista de módulos do app como "não contratado" e pode ser marcado como interesse no formulário. O código do módulo está pausado. |
+
+- **"Em breve"** (`src/components/ui/SoonTag.tsx`): marca o que está em desenvolvimento. Hoje: modo offline, painel de contingência, módulos como serviços independentes e o caminho do exame entre clínica e laboratório. Para tirar a etiqueta quando a funcionalidade chegar: `soon` em `SectionHeading` (seções) ou em `src/content/features.ts` (diferenciais).
+- **"Quero ser avisado"** da seção Laboratório leva ao formulário já com "Laboratório" marcado (evento `ecosaude:interesse`).
+- O banco ganhou o valor `lab` no tipo `module_id` (migração **0036**). O Postgres não deixa usar um valor novo de enum na mesma transação em que ele foi criado, por isso a **linha do catálogo** (módulo e submódulos do Laboratório) vem do seed: depois de `pnpm db:migrate`, rode **`pnpm db:seed`** (não apaga nada; só cria o que falta).
+- Cor do Laboratório: petróleo (`--color-lab*` em `packages/tokens/theme.css`).
+
+**Logo e nome:** o site, o app e o backoffice já usam a marca Tropi (monograma "t" + "tropi"). Se ainda aparecer "EcoSaúde" ou o logo antigo, é uma versão antiga publicada ou o cache do navegador: publique a versão nova e recarregue com Ctrl+Shift+R (o ícone da aba pode levar mais tempo; abra uma janela anônima para conferir).
+
 ## 5b. Tropi Prontuário (fase 1)
 
 Ligado quando a clínica tem a contratação do módulo **Prontuário** (backoffice > clínica >
@@ -1527,6 +1545,7 @@ São duas camadas:
 |---|---|---|
 | Testes de unidade | `packages/core/src/**/*.test.ts`, `packages/channels/src/*.test.ts` | Regras puras: agenda, unidades, permissões, sinais vitais, CID, IA... |
 | Ponta a ponta (Playwright) | `apps/app/e2e/*.spec.ts` | O sistema de verdade no Chromium: telas, banco, permissões e LGPD juntos |
+| Landing page (Playwright) | `apps/site/e2e/landing.spec.ts` | Marca Tropi, os 5 módulos, "Em breve" nas promessas futuras e formulário, no desktop e no celular (sem banco) |
 
 **Os testes de ponta a ponta** (`apps/app/e2e/`):
 
@@ -1561,6 +1580,8 @@ pnpm test:e2e                                # 5. sobe o app na porta 3100 e rod
 - Mudou o código do app? Repita o passo 4 antes do 5.
 
 **Segurança:** os testes apagam e recriam dados. Por isso usam um banco **só deles** (`E2E_DATABASE_URL`, padrão `postgres://postgres:postgres@localhost:54320/ecosaude_e2e`) e se recusam a rodar em banco cujo nome não termine em `_e2e` ou `_test`. Seu banco de desenvolvimento (`ecosaude`) nunca é tocado. A senha dos usuários de demonstração no banco de testes vira `Tropi-E2E-2026x`.
+
+**Landing page:** `pnpm --filter @ecosaude/site build` e depois `pnpm test:e2e:site` (sobe o site na porta 3300; `SITE_E2E_PORT` muda a porta).
 
 Variáveis opcionais: `E2E_PORT` (padrão 3100), `E2E_BASE_URL` (testar um app já no ar, sem subir outro) e `PW_CHROMIUM_PATH` (Chromium já instalado em outro lugar).
 

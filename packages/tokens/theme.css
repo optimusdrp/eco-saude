@@ -16,6 +16,7 @@
  * MÓDULOS (cada um com a sua cor; nenhuma decora a marca no lugar do índigo)
  *   Tropi Atendimento (crm) índigo · Tropi Gestão (erp) âmbar
  *   Tropi Prontuário (pep) azul-céu · Tropi Indicadores (bi) orquídea
+ *   Tropi Laboratório (lab) petróleo
  *
  * ESTADOS: "ok" (deu certo) e "alert" (erro, urgência). Verde só aparece como
  * sinal de "deu certo", nunca como cor da marca.
@@ -47,6 +48,9 @@
   --color-pep-tint: #e3eefa;
   --color-bi: #9b3f8f;
   --color-bi-tint: #f6e7f3;
+  --color-lab: #12808a;
+  --color-lab-ink: #0b6169;
+  --color-lab-tint: #e0f2f3;
 
   /* Estados */
   --color-ok: #2a7f50;

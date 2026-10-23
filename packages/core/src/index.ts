@@ -25,7 +25,7 @@ export const BRAND = {
 /* ------------------------------ Módulos ------------------------------ */
 
 /** Ids internos (rotas, banco, planos). NÃO mudam com a marca: só os nomes exibidos mudam. */
-export const MODULE_IDS = ["crm", "erp", "pep", "bi"] as const;
+export const MODULE_IDS = ["crm", "erp", "pep", "bi", "lab"] as const;
 export type ModuleId = (typeof MODULE_IDS)[number];
 
 /** Nome curto do módulo (dentro do Tropi): menus, planos, etiquetas. Português simples, sem siglas. */
@@ -34,6 +34,8 @@ export const MODULE_LABEL: Record<ModuleId, string> = {
   erp: "Gestão",
   pep: "Prontuário",
   bi: "Indicadores",
+  // Para laboratórios de análises clínicas, imagem e prótese (módulo planejado; código pausado)
+  lab: "Laboratório",
 };
 
 /** Nome completo, para quando o módulo aparece sozinho (site, contratação): "Tropi Atendimento". */
@@ -42,6 +44,7 @@ export const MODULE_FULL_NAME: Record<ModuleId, string> = {
   erp: `${BRAND.name} ${MODULE_LABEL.erp}`,
   pep: `${BRAND.name} ${MODULE_LABEL.pep}`,
   bi: `${BRAND.name} ${MODULE_LABEL.bi}`,
+  lab: `${BRAND.name} ${MODULE_LABEL.lab}`,
 };
 
 /* ------------------------------- Leads ------------------------------- */

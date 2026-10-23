@@ -2,6 +2,7 @@ import { Building2, FileClock, KeyRound, Lock, ShieldCheck, Workflow } from "luc
 import { Container } from "@/components/ui/Container";
 import { moduleColor } from "@/components/ui/ModuleTag";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { SoonTag } from "@/components/ui/SoonTag";
 import { modules } from "@/content/modules";
 import { cn } from "@/lib/cn";
 
@@ -30,7 +31,7 @@ const items = [
   {
     Icon: Lock,
     title: "Criptografia em todo o caminho",
-    text: "Na transmissão, no servidor e também no aparelho, quando os dados ficam guardados para o modo offline.",
+    text: "Na transmissão e nos arquivos guardados (anexos e documentos). No aparelho, quando chegar o modo offline.",
   },
   {
     Icon: ShieldCheck,
@@ -60,11 +61,14 @@ export function Security() {
 
           {/* Isolamento de falhas: ilustra que um módulo parado não derruba os outros */}
           <aside className="self-start rounded-3xl bg-fog p-5 ring-1 ring-line sm:p-7">
-            <Workflow className="size-6 text-crm" aria-hidden />
+            <div className="flex items-center justify-between gap-3">
+              <Workflow className="size-6 text-crm" aria-hidden />
+              <SoonTag />
+            </div>
             <h3 className="mt-3 text-xl font-bold">Um módulo parado não derruba os outros</h3>
             <p className="mt-2 text-[0.97rem] text-ink-soft">
-              Cada módulo roda como um serviço independente. Se um precisar de manutenção,
-              só aquela área avisa; o resto continua normal.
+              Em desenvolvimento: cada módulo vai rodar como um serviço independente. Se um precisar
+              de manutenção, só aquela área avisa; o resto continua normal.
             </p>
             <ul className="mt-5 space-y-2">
               {modules.map((m) => {

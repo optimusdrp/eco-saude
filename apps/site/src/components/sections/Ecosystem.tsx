@@ -112,10 +112,11 @@ export function Ecosystem() {
             <div className="rounded-2xl bg-ink p-2 shadow-[0_30px_60px_-30px_rgba(24,32,58,0.5)]">
               <div className="rounded-xl bg-fog p-4 sm:p-5">
                 <p className="text-sm text-ink-soft">Seu ambiente</p>
-                <p className="font-display text-lg font-bold">Clínica Exemplo</p>
+                {/* Só o Laboratório marcado: o ambiente é de um laboratório, não de uma clínica */}
+                <p className="font-display text-lg font-bold">{selected.length === 1 && selected[0] === "lab" ? "Laboratório Exemplo" : "Clínica Exemplo"}</p>
 
                 {/* "Menu" do sistema: módulos não contratados aparecem bloqueados */}
-                <ul className="mt-4 grid grid-cols-2 gap-2 xs:grid-cols-4">
+                <ul className="mt-4 grid grid-cols-2 gap-2 xs:grid-cols-3">
                   {modules.map((m) => {
                     const on = selected.includes(m.id);
                     return (

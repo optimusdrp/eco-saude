@@ -12,7 +12,7 @@ export function Footer() {
       <Container className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]">
         <div className="max-w-sm">
           <Logo inverted />
-          <p className="mt-4 text-[0.95rem]">{siteConfig.tagline} Atendimento, Gestão, Prontuário e Indicadores para clínicas, contratados do jeito que fizer sentido.</p>
+          <p className="mt-4 text-[0.95rem]">{siteConfig.tagline} Atendimento, Prontuário, Gestão, Indicadores e Laboratório para clínicas e laboratórios, contratados do jeito que fizer sentido.</p>
         </div>
 
         <nav aria-label="Rodapé">

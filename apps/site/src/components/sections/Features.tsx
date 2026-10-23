@@ -1,6 +1,7 @@
 import { WaitlistDemo } from "@/components/demos/WaitlistDemo";
 import { Container } from "@/components/ui/Container";
 import { ModuleTag } from "@/components/ui/ModuleTag";
+import { SoonTag } from "@/components/ui/SoonTag";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { features } from "@/content/features";
 
@@ -39,7 +40,10 @@ export function Features() {
           <ul className="divide-y divide-line border-y border-line">
             {rest.map((f) => (
               <li key={f.id} className="py-6">
-                <h3 className="text-xl font-bold">{f.title}</h3>
+                <h3 className="flex flex-wrap items-center gap-2 text-xl font-bold">
+                  {f.title}
+                  {f.soon ? <SoonTag /> : null}
+                </h3>
                 <p className="mt-2 text-[0.98rem] text-ink-soft">{f.description}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {f.modules.map((id) => (

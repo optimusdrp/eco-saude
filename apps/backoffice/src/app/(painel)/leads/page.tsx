@@ -1,3 +1,4 @@
+import type { ModuleId } from "@ecosaude/core";
 import { CLINIC_SIZE_LABEL, LEAD_STAGE_LABEL, LEAD_STAGES, type LeadStage } from "@ecosaude/core";
 import { and, db, desc, eq, ilike, or, schema, type SQL } from "@ecosaude/db";
 import { Search } from "lucide-react";
@@ -168,7 +169,7 @@ interface LeadCardData {
   name: string;
   clinicName: string;
   size: keyof typeof CLINIC_SIZE_LABEL;
-  interests: ("crm" | "erp" | "pep" | "bi")[];
+  interests: ModuleId[];
   stage: LeadStage;
   createdAt: Date;
   owner: { name: string } | null;

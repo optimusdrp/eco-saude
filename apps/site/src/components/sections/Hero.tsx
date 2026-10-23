@@ -23,8 +23,8 @@ export function Hero() {
             {siteConfig.tagline}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-soft sm:text-xl">
-            Atendimento, Gestão, Prontuário e Indicadores: módulos que você contrata separadamente e usa
-            juntos, com o mesmo login. A tela muda conforme quem usa e, se a internet cair, a clínica continua atendendo.
+            Atendimento, Prontuário, Gestão, Indicadores e Laboratório: módulos que você contrata separadamente
+            e usa juntos, com o mesmo login. A tela muda conforme quem usa, da recepção ao consultório.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 xs:flex-row">

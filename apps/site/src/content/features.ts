@@ -30,22 +30,31 @@ export const features: Feature[] = [
     id: "linha-tempo",
     title: "Uma linha do tempo por paciente",
     description:
-      "Mensagens, consultas, pagamentos e registros clínicos em ordem cronológica. Cada perfil vê apenas o que tem permissão para ver.",
-    modules: ["crm", "erp", "pep"],
+      "Mensagens, consultas e registros clínicos em ordem cronológica (e os pagamentos, quando a Gestão chegar). Cada perfil vê apenas o que tem permissão para ver.",
+    modules: ["crm", "pep", "erp"],
   },
   {
     id: "comandos",
     title: "Tudo a um atalho de distância",
     description:
       "Ctrl+K abre a barra de comandos: buscar paciente, marcar consulta ou responder uma conversa sem navegar por menus. Experimente nesta página.",
-    modules: ["crm", "erp", "pep", "bi"],
+    modules: ["crm", "pep"],
   },
   {
     id: "contingencia",
     title: "Painel de contingência",
     description:
-      "Se a internet cai, um painel mostra em linguagem simples o que ficou salvo no aparelho, o que espera para sincronizar e o que precisa de decisão humana.",
-    modules: ["crm", "erp", "pep", "bi"],
+      "Quando o modo offline chegar, um painel vai mostrar em linguagem simples o que ficou salvo no aparelho, o que espera para sincronizar e o que precisa de decisão humana.",
+    modules: ["crm", "pep"],
+    soon: true,
+  },
+  {
+    id: "laudo-volta",
+    title: "O pedido de exame vai e o laudo volta",
+    description:
+      "Com o Laboratório, o exame pedido no prontuário chega ao laboratório, o preparo vai pelo WhatsApp e o laudo volta para o prontuário com código de verificação.",
+    modules: ["pep", "lab", "crm"],
+    soon: true,
   },
 ];
 

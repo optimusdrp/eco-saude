@@ -14,7 +14,7 @@ function cn(...inputs: ClassValue[]) {
 
 /* ---------------------------------- Badge ---------------------------------- */
 
-export type Tone = "neutral" | "crm" | "erp" | "pep" | "bi" | "alert" | "success" | "warning";
+export type Tone = "neutral" | "crm" | "erp" | "pep" | "bi" | "lab" | "alert" | "success" | "warning";
 
 const toneClass: Record<Tone, string> = {
   neutral: "bg-fog text-ink-soft ring-1 ring-line",
@@ -22,6 +22,7 @@ const toneClass: Record<Tone, string> = {
   erp: "bg-erp-tint text-erp-ink",
   pep: "bg-pep-tint text-pep-ink",
   bi: "bg-bi-tint text-bi",
+  lab: "bg-lab-tint text-lab-ink",
   alert: "bg-alert-tint text-alert",
   success: "bg-ok-tint text-ok-ink",
   warning: "bg-erp-tint text-erp-ink",
@@ -41,7 +42,7 @@ export function Badge({ tone = "neutral", children, className }: { tone?: Tone; 
   );
 }
 
-const moduleDot: Record<ModuleId, string> = { crm: "bg-crm", erp: "bg-erp", pep: "bg-pep", bi: "bg-bi" };
+const moduleDot: Record<ModuleId, string> = { crm: "bg-crm", erp: "bg-erp", pep: "bg-pep", bi: "bg-bi", lab: "bg-lab" };
 
 /** Etiqueta de módulo com a cor da identidade visual. */
 export function ModuleBadge({ id }: { id: ModuleId }) {

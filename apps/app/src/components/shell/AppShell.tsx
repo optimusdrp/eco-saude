@@ -1,5 +1,7 @@
 "use client";
 
+import type { ModuleId } from "@ecosaude/core";
+
 import { Award, CalendarClock, ClipboardPlus, Stethoscope, CalendarDays, Hourglass, ListChecks, Lock, LogOut, Menu, MessagesSquare, Radio, Route, Search, Settings, Sun, Users, Wifi, WifiOff, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,7 +39,7 @@ export interface NavItem {
 }
 
 export interface ModuleItem {
-  id: "crm" | "erp" | "pep" | "bi";
+  id: ModuleId;
   label: string;
   enabled: boolean;
 }
@@ -57,7 +59,7 @@ const icons = {
   config: Settings,
 };
 
-const moduleDot = { crm: "bg-crm", erp: "bg-erp", pep: "bg-pep", bi: "bg-bi" };
+const moduleDot: Record<ModuleId, string> = { crm: "bg-crm", erp: "bg-erp", pep: "bg-pep", bi: "bg-bi", lab: "bg-lab" };
 
 /** Tela inicial de cada módulo contratado (os demais mostram a apresentação em /modulos/<id>) */
 const moduleHome: Partial<Record<ModuleItem["id"], string>> = { crm: "/hoje", pep: "/consultorio" };

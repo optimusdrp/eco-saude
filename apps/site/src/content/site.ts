@@ -11,7 +11,7 @@ export const siteConfig = {
   name: BRAND.name,
   tagline: BRAND.tagline,
   description:
-    "Tropi é o ecossistema da clínica: Atendimento, Gestão, Prontuário e Indicadores. Você contrata só os módulos que precisa e usa tudo em um único ambiente, que continua funcionando quando a internet cai.",
+    "Tropi é o ecossistema da saúde para clínicas e laboratórios: Atendimento, Prontuário, Gestão, Indicadores e Laboratório. Você contrata só os módulos que precisa e usa tudo em um único ambiente, com o mesmo login.",
   /** Usado em metadados (Open Graph, sitemap). Ajuste após definir o domínio. */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://tropi.vercel.app",
   locale: "pt_BR",
@@ -21,7 +21,7 @@ export const siteConfig = {
 export const navigation: NavItem[] = [
   { label: "Ecossistema", href: "#ecossistema" },
   { label: "Diferenciais", href: "#diferenciais" },
-  { label: "Modo offline", href: "#offline" },
+  { label: "Laboratório", href: "#laboratorio" },
   { label: "Segurança", href: "#seguranca" },
   { label: "Perguntas", href: "#perguntas" },
 ];

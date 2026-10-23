@@ -26,6 +26,10 @@ const PITCH: Record<ModuleId, { title: string; points: string[] }> = {
     title: "Indicadores e inteligência",
     points: ["Painéis de faturamento, ocupação e retorno", "Comparativos por profissional e por período", "Alertas automáticos quando um indicador sai do normal"],
   },
+  lab: {
+    title: "Laboratório integrado",
+    points: ["Pedidos de exame da ficha e do prontuário, com preparo enviado ao paciente", "Coleta, bancada, conferência e laudo com código de verificação", "Laudo de volta no prontuário e aviso ao paciente quando ficar pronto"],
+  },
 };
 
 /**

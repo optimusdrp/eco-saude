@@ -14,17 +14,17 @@ export const faq: FaqItem[] = [
   {
     question: "O que funciona quando a internet cai?",
     answer:
-      "Consultar a agenda e o cadastro dos pacientes, registrar atendimentos e preparar mensagens. Tudo fica salvo no aparelho e é sincronizado quando a conexão volta. Envio de WhatsApp, e-mail e recursos de IA dependem de internet e ficam na fila até lá.",
+      "Hoje o Tropi precisa de internet. O que já está pronto: quando um canal de mensagens cai, as mensagens esperam na fila e saem sozinhas quando ele volta, e a equipe vê o aviso em todas as telas. O modo offline completo (agenda, cadastro e atendimento salvos no aparelho) está em desenvolvimento.",
   },
   {
     question: "E se duas pessoas marcarem o mesmo horário sem internet?",
     answer:
-      "Ao sincronizar, o sistema não escolhe sozinho. O conflito aparece no painel de contingência para alguém da clínica decidir, com as duas versões lado a lado.",
+      "Quando o modo offline chegar, o sistema não vai escolher sozinho: o conflito aparece no painel de contingência para alguém da clínica decidir, com as duas versões lado a lado. Hoje, sem internet, não é possível marcar.",
   },
   {
     question: "Os dados da minha clínica ficam separados das outras?",
     answer:
-      "Sim. Cada clínica tem os dados isolados no próprio banco de dados, e não apenas na aplicação: mesmo um erro de programação não expõe informações de outra clínica. Toda ação fica registrada em uma trilha de auditoria.",
+      "Sim. Cada clínica tem os dados isolados no próprio banco de dados, e não apenas na aplicação: mesmo um erro de programação não expõe informações de outra clínica. Cada abertura de prontuário e as ações sensíveis ficam registradas em uma trilha de auditoria.",
   },
   {
     question: "Funciona no celular e no tablet?",
@@ -34,6 +34,11 @@ export const faq: FaqItem[] = [
   {
     question: "Quando os módulos estarão disponíveis?",
     answer:
-      "O Tropi Atendimento está em fase de testes. Gestão, Prontuário e Indicadores estão em desenvolvimento, nessa ordem. Peça uma demonstração para acompanhar as liberações.",
+      "O Tropi Atendimento e o Tropi Prontuário estão em fase de testes. Gestão, Indicadores e Laboratório estão planejados, nessa ordem. Peça uma demonstração para acompanhar as liberações.",
+  },
+  {
+    question: "O Tropi atende laboratórios?",
+    answer:
+      "Vai atender. O Tropi Laboratório é para laboratórios de análises clínicas, imagem e prótese dentária: pedidos, coleta, bancada, laudo com código de verificação e ligação com as clínicas que usam o Tropi, que pedem o exame pelo prontuário e recebem o laudo de volta. O módulo está planejado; deixe seu contato para ser avisado.",
   },
 ];

@@ -42,9 +42,10 @@ export function CommandPalette() {
   // Lista de comandos disponíveis.
   const commands = useMemo<Command[]>(
     () => [
-      { id: "ecossistema", label: "Ver os módulos do ecossistema", group: "Ir para", keywords: "crm erp prontuario bi modulos", run: () => goTo("ecossistema") },
+      { id: "ecossistema", label: "Ver os módulos do ecossistema", group: "Ir para", keywords: "crm erp prontuario bi laboratorio modulos", run: () => goTo("ecossistema") },
       { id: "diferenciais", label: "Ver os diferenciais", group: "Ir para", keywords: "funcionalidades lista espera falta", run: () => goTo("diferenciais") },
-      { id: "offline", label: "Ver como funciona sem internet", group: "Ir para", keywords: "offline contingencia sincronizar", run: () => goTo("offline") },
+      { id: "laboratorio", label: "Ver o Tropi Laboratório", group: "Ir para", keywords: "laboratorio exames laudo imagem protese analises", run: () => goTo("laboratorio") },
+      { id: "offline", label: "Ver o modo offline (em breve)", group: "Ir para", keywords: "offline contingencia sincronizar internet", run: () => goTo("offline") },
       { id: "seguranca", label: "Ver segurança e LGPD", group: "Ir para", keywords: "seguranca lgpd dados isolamento", run: () => goTo("seguranca") },
       { id: "perguntas", label: "Ler as perguntas frequentes", group: "Ir para", keywords: "faq duvidas", run: () => goTo("perguntas") },
       { id: "demo", label: "Pedir uma demonstração", group: "Ir para", keywords: "contato demonstracao falar", run: () => goTo("demonstracao") },

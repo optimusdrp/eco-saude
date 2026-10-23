@@ -12,6 +12,7 @@ export const moduleColor: Record<ModuleId, { dot: string; tag: string; text: str
   erp: { dot: "bg-erp", tag: "bg-erp-tint text-erp-ink", text: "text-erp-ink", ring: "ring-erp", bg: "bg-erp" },
   pep: { dot: "bg-pep", tag: "bg-pep-tint text-pep-ink", text: "text-pep-ink", ring: "ring-pep", bg: "bg-pep" },
   bi: { dot: "bg-bi", tag: "bg-bi-tint text-bi", text: "text-bi", ring: "ring-bi", bg: "bg-bi" },
+  lab: { dot: "bg-lab", tag: "bg-lab-tint text-lab-ink", text: "text-lab-ink", ring: "ring-lab", bg: "bg-lab" },
 };
 
 /** Etiqueta pequena com o nome do módulo e sua cor. */

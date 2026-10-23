@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { Mail, MessageCircle, RotateCcw, Smartphone } from "lucide-react";
+import { Camera, MessageCircle, RotateCcw, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -18,8 +18,8 @@ type Step = "idle" | "cancelled" | "offering" | "filled";
 
 const waitlist = [
   { name: "Marcos Teles", channel: "WhatsApp", Icon: MessageCircle },
-  { name: "Lívia Andrade", channel: "SMS", Icon: Smartphone },
-  { name: "Rui Fagundes", channel: "E-mail", Icon: Mail },
+  { name: "Lívia Andrade", channel: "Instagram", Icon: Camera },
+  { name: "Rui Fagundes", channel: "Telegram", Icon: Send },
 ];
 
 export function WaitlistDemo() {

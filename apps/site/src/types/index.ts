@@ -4,8 +4,9 @@
  * (pasta src/content) e os componentes falem a mesma "língua".
  */
 
-/** Identificador de cada módulo do ecossistema. */
-export type ModuleId = "crm" | "erp" | "pep" | "bi";
+/** Identificador de cada módulo do ecossistema (o mesmo do core: catálogo, planos e leads). */
+export type { ModuleId } from "@ecosaude/core";
+import type { ModuleId } from "@ecosaude/core";
 
 /** Situação de cada módulo no roadmap do produto. */
 export type ModuleStatus = "em-teste" | "em-desenvolvimento" | "planejado";
@@ -50,6 +51,8 @@ export interface Feature {
   description: string;
   /** Módulos envolvidos — indica de onde vem a funcionalidade. */
   modules: ModuleId[];
+  /** Ainda em desenvolvimento: aparece com a etiqueta "Em breve" */
+  soon?: boolean;
 }
 
 export interface FaqItem {

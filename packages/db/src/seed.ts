@@ -102,6 +102,21 @@ const catalog: {
       { name: "Avançado", price: 34900, maxUsers: null, description: "Com análises de receita e perguntas livres.", features: "all" },
     ],
   },
+  {
+    // Para laboratórios de análises clínicas, imagem e prótese. Planejado: sem planos à venda até
+    // o módulo existir (o backoffice cria os planos quando houver preço definido).
+    id: "lab",
+    name: "Laboratório",
+    description: "Laboratórios de análises clínicas, imagem e prótese",
+    submodules: [
+      ["lab.orders", "Pedidos e etiquetas"],
+      ["lab.bench", "Coleta, bancada e liberação"],
+      ["lab.imaging", "Imagem e laudo do radiologista"],
+      ["lab.prosthesis", "Prótese dentária"],
+      ["lab.reports", "Laudo com código de verificação"],
+    ],
+    plans: [],
+  },
 ];
 
 async function seedCatalog() {
